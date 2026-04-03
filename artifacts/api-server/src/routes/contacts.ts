@@ -90,6 +90,14 @@ router.post("/contacts", async (req, res) => {
   }
   const normalizedPhone = normalizePhone(phone);
 
+  const [existing] = await db
+    .select()
+    .from(contactsTable)
+    .where(eq(contactsTable.normalizedPhone, normalizedPhone));
+  if (existing) {
+    return res.status(409).json({ error: "Contact with this phone number already exists", contactId: existing.id });
+  }
+
   const [contact] = await db
     .insert(contactsTable)
     .values({
@@ -130,6 +138,16 @@ router.patch("/contacts/:id", async (req, res) => {
   const updates: Partial<typeof existing> = {};
   if (body.name != null) updates.name = body.name;
   if (body.phone != null) {
+    const newNormalized = normalizePhone(body.phone);
+    if (newNormalized !== existing.normalizedPhone) {
+      const [duplicate] = await db
+        .select()
+        .from(contactsTable)
+        .where(eq(contactsTable.normalizedPhone, newNormalized));
+      if (duplicate) {
+        return res.status(409).json({ error: "Another contact with this phone number already exists", contactId: duplicate.id });
+      }
+    }
     updates.phone = body.phone;
     updates.normalizedPhone = normalizePhone(body.phone);
     updates.validationStatus = isValidPhone(body.phone) ? "valid" : "invalid";

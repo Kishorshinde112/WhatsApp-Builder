@@ -22,8 +22,20 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, ArrowRight, Check, Play } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Play, AlertTriangle, CheckCircle2, Info } from "lucide-react";
 import { Link } from "wouter";
+
+const SAMPLE_CONTACTS = [
+  { name: "Ana Silva", phone: "+5511999990001" },
+  { name: "Bruno Oliveira", phone: "+5511999990002" },
+  { name: "Carla Mendes", phone: "+5521888880001" },
+];
+
+const renderSample = (template: string, contact: { name: string; phone: string }) =>
+  template
+    .replace(/\{\{name\}\}/g, contact.name)
+    .replace(/\{\{phone\}\}/g, contact.phone)
+    .replace(/\{\{(\w+)\}\}/g, (_, key) => `[${key}]`);
 
 const STEPS = ["Template", "Audience & Settings", "Review & Launch"];
 
@@ -39,6 +51,15 @@ export default function CampaignNew() {
   const [delaySeconds, setDelaySeconds] = useState(2);
   const [provider, setProvider] = useState("mock");
   const [dryRun, setDryRun] = useState(false);
+  const [preflight, setPreflight] = useState<{
+    valid: boolean;
+    totalContacts: number;
+    invalidPhones: number;
+    duplicateContacts: number;
+    estimatedDurationSeconds: number;
+    errors: string[];
+    warnings: string[];
+  } | null>(null);
 
   const { data: lists } = useGetContactLists();
   const createCampaign = useCreateCampaign();
@@ -73,11 +94,24 @@ export default function CampaignNew() {
     }
   };
 
-  const handleValidateAndLaunch = async () => {
+  const handleRunPreflight = async () => {
     const campaign = await handleCreate();
     if (!campaign) return;
     try {
-      await validate.mutateAsync({ id: campaign.id });
+      const result = await validate.mutateAsync({ id: campaign.id });
+      setPreflight({
+        valid: result.valid,
+        totalContacts: result.totalContacts,
+        invalidPhones: result.invalidPhones,
+        duplicateContacts: result.duplicateContacts ?? 0,
+        estimatedDurationSeconds: result.estimatedDurationSeconds,
+        errors: result.errors ?? [],
+        warnings: result.warnings ?? [],
+      });
+      if (!result.valid) {
+        toast({ title: "Validation failed", description: "Review the issues below before launching.", variant: "destructive" });
+        return;
+      }
       await launch.mutateAsync({ id: campaign.id });
       queryClient.invalidateQueries({ queryKey: getGetCampaignsQueryKey() });
       toast({ title: "Campaign launched!", description: campaign.name });
@@ -86,6 +120,8 @@ export default function CampaignNew() {
       toast({ title: "Failed to launch campaign", variant: "destructive" });
     }
   };
+
+  const handleValidateAndLaunch = handleRunPreflight;
 
   const handleSaveDraft = async () => {
     const campaign = await handleCreate();
@@ -247,43 +283,114 @@ export default function CampaignNew() {
 
       {/* Step 2: Review */}
       {step === 2 && (
-        <Card>
-          <CardContent className="pt-6 space-y-4">
-            <h2 className="font-semibold">Review before launching</h2>
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <div>
-                <p className="text-muted-foreground text-xs">Campaign name</p>
-                <p className="font-medium">{name}</p>
+        <div className="space-y-4">
+          <Card>
+            <CardContent className="pt-6 space-y-4">
+              <h2 className="font-semibold">Review before launching</h2>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <p className="text-muted-foreground text-xs">Campaign name</p>
+                  <p className="font-medium">{name}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs">Contact list</p>
+                  <p className="font-medium">{selectedList?.name ?? "—"} ({selectedList?.contactCount ?? 0} contacts)</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs">Provider</p>
+                  <p className="font-medium">{provider}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs">Delay</p>
+                  <p className="font-medium">{delaySeconds}s between messages</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs">Mode</p>
+                  <p className="font-medium">{dryRun ? "Dry run (no delivery)" : "Live"}</p>
+                </div>
               </div>
               <div>
-                <p className="text-muted-foreground text-xs">Contact list</p>
-                <p className="font-medium">{selectedList?.name ?? "—"} ({selectedList?.contactCount ?? 0} contacts)</p>
+                <p className="text-muted-foreground text-xs mb-1">Template</p>
+                <div
+                  className="text-sm p-3 rounded-md bg-muted border font-mono leading-relaxed"
+                  dangerouslySetInnerHTML={{ __html: highlightTemplate(template) }}
+                />
               </div>
-              <div>
-                <p className="text-muted-foreground text-xs">Provider</p>
-                <p className="font-medium">{provider}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-6 space-y-3">
+              <div className="flex items-center gap-2">
+                <Info className="h-4 w-4 text-primary" />
+                <p className="text-sm font-medium">Variable Preview (sample contacts)</p>
               </div>
-              <div>
-                <p className="text-muted-foreground text-xs">Delay</p>
-                <p className="font-medium">{delaySeconds}s between messages</p>
+              <div className="space-y-2">
+                {SAMPLE_CONTACTS.map((c, i) => (
+                  <div key={i} className="text-sm p-2.5 rounded-md bg-muted border">
+                    <p className="text-xs text-muted-foreground mb-1 font-medium">{c.name} · {c.phone}</p>
+                    <p className="leading-relaxed">{renderSample(template, c)}</p>
+                  </div>
+                ))}
               </div>
-              <div>
-                <p className="text-muted-foreground text-xs">Mode</p>
-                <p className="font-medium">{dryRun ? "Dry run (no delivery)" : "Live"}</p>
-              </div>
-            </div>
-            <div>
-              <p className="text-muted-foreground text-xs mb-1">Template</p>
-              <div
-                className="text-sm p-3 rounded-md bg-muted border font-mono leading-relaxed"
-                dangerouslySetInnerHTML={{ __html: highlightTemplate(template) }}
-              />
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Sample rendering: {template.replace(/\{\{name\}\}/g, selectedList?.name?.split(" ")[0] ?? "Carlos")}
-            </p>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+
+          {preflight && (
+            <Card className={preflight.valid ? "border-green-500/50" : "border-destructive/50"}>
+              <CardContent className="pt-6 space-y-3">
+                <div className="flex items-center gap-2">
+                  {preflight.valid
+                    ? <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    : <AlertTriangle className="h-4 w-4 text-destructive" />}
+                  <p className="text-sm font-medium">
+                    {preflight.valid ? "Validation passed — ready to launch" : "Validation failed — fix issues before launching"}
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div className="p-2 rounded bg-muted">
+                    <p className="text-xs text-muted-foreground">Total contacts</p>
+                    <p className="font-semibold">{preflight.totalContacts}</p>
+                  </div>
+                  <div className="p-2 rounded bg-muted">
+                    <p className="text-xs text-muted-foreground">Invalid phones</p>
+                    <p className={`font-semibold ${preflight.invalidPhones > 0 ? "text-destructive" : ""}`}>{preflight.invalidPhones}</p>
+                  </div>
+                  <div className="p-2 rounded bg-muted">
+                    <p className="text-xs text-muted-foreground">Duplicates</p>
+                    <p className="font-semibold">{preflight.duplicateContacts}</p>
+                  </div>
+                  <div className="p-2 rounded bg-muted">
+                    <p className="text-xs text-muted-foreground">Est. duration</p>
+                    <p className="font-semibold">
+                      {preflight.estimatedDurationSeconds < 60
+                        ? `${preflight.estimatedDurationSeconds}s`
+                        : `${Math.round(preflight.estimatedDurationSeconds / 60)}m`}
+                    </p>
+                  </div>
+                </div>
+                {preflight.errors.length > 0 && (
+                  <div className="space-y-1">
+                    {preflight.errors.map((e, i) => (
+                      <p key={i} className="text-xs text-destructive flex items-center gap-1">
+                        <AlertTriangle className="h-3 w-3 flex-shrink-0" /> {e}
+                      </p>
+                    ))}
+                  </div>
+                )}
+                {preflight.warnings.length > 0 && (
+                  <div className="space-y-1">
+                    {preflight.warnings.map((w, i) => (
+                      <p key={i} className="text-xs text-yellow-500 flex items-center gap-1">
+                        <Info className="h-3 w-3 flex-shrink-0" /> {w}
+                      </p>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+        </div>
       )}
 
       {/* Navigation buttons */}

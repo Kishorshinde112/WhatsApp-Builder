@@ -34,6 +34,12 @@ async function seed() {
     "Julio Fernandes", "Karina Nascimento", "Leonardo Cardoso", "Melissa Andrade", "Nelson Araujo",
     "Ophelia Sousa", "Paulo Melo", "Quezia Dias", "Ricardo Guerra", "Sofia Cavalcante",
     "Tatiana Monteiro", "Ulysses Rezende", "Valentina Brito", "Wilson Figueiredo", "Xuxa Paiva",
+    "Amanda Corrêa", "Bernardo Lima", "Cecília Ramos", "Diego Ferreira", "Eduarda Neves",
+    "Fábio Leal", "Grace Rodrigues", "Hugo Azevedo", "Iara Moura", "Jonas Telles",
+    "Letícia Guimarães", "Marcelo Viana", "Natália Barbosa", "Oscar Pereira", "Priscila Santos",
+    "Rogério Matos", "Simone Faria", "Tobias Cunha", "Úrsula Dantas", "Vitor Campos",
+    "Walquíria Nunes", "Yago Ribeiro", "Zenaide Costa", "Alexandre Carmo", "Bianca Rocha",
+    "Cristiano Alves", "Débora Peixoto", "Evandro Melo", "Fernanda Gomes", "Gustavo Araújo",
   ];
 
   const phones = contactNames.map((_, i) => {
@@ -56,7 +62,7 @@ async function seed() {
   console.log(`Created ${contacts.length} contacts`);
 
   const [listAll, listVip, listLeads] = await db.insert(contactListsTable).values([
-    { name: "All Customers", description: "Complete customer database", contactCount: 50 },
+    { name: "All Customers", description: "Complete customer database", contactCount: contactNames.length },
     { name: "VIP Customers", description: "High-value customers", contactCount: 0 },
     { name: "Leads", description: "Potential new customers", contactCount: 0 },
   ]).returning();
@@ -97,13 +103,13 @@ async function seed() {
       listId: listAll.id,
       dryRun: "false",
       delaySeconds: 3,
-      totalContacts: 50,
+      totalContacts: 80,
       queuedCount: 0,
       sentCount: 0,
       deliveredCount: 0,
-      readCount: 43,
-      failedCount: 5,
-      noAccountCount: 2,
+      readCount: 63,
+      failedCount: 11,
+      noAccountCount: 6,
       createdAt: daysAgo(14),
       updatedAt: daysAgo(13),
     },
@@ -133,12 +139,12 @@ async function seed() {
       listId: listAll.id,
       dryRun: "false",
       delaySeconds: 5,
-      totalContacts: 50,
-      queuedCount: 12,
-      sentCount: 3,
-      deliveredCount: 8,
-      readCount: 24,
-      failedCount: 3,
+      totalContacts: 80,
+      queuedCount: 22,
+      sentCount: 5,
+      deliveredCount: 10,
+      readCount: 38,
+      failedCount: 5,
       noAccountCount: 0,
       createdAt: daysAgo(1),
       updatedAt: new Date(),
@@ -228,7 +234,7 @@ async function seed() {
   console.log(`Created ${campaigns.length} campaigns`);
 
   const msgStatuses = ["read", "read", "read", "read", "delivered", "sent", "failed", "noAccount"] as const;
-  const camp1Contacts = contacts.slice(0, 50);
+  const camp1Contacts = contacts;
 
   const camp1Messages = await db.insert(messagesTable).values(
     camp1Contacts.map((c, i) => {
@@ -340,10 +346,10 @@ async function seed() {
 
   console.log(`Created ${camp2Messages.length} messages for campaign 2`);
 
-  const runningContacts = contacts.slice(0, 38);
+  const runningContacts = contacts.slice(0, 58);
   const runningMessages = await db.insert(messagesTable).values(
     runningContacts.map((c, i) => {
-      const status = i < 24 ? "read" : i < 32 ? "delivered" : i < 35 ? "sent" : "failed";
+      const status = i < 38 ? "read" : i < 48 ? "delivered" : i < 53 ? "sent" : "failed";
       return {
         campaignId: campRunning.id,
         contactId: c.id,
@@ -362,8 +368,8 @@ async function seed() {
 
   await db.insert(campaignContactsTable).values(
     contacts.map((c, i) => {
-      const isProcessed = i < 38;
-      const status = !isProcessed ? "queued" : i < 24 ? "read" : i < 32 ? "delivered" : i < 35 ? "sent" : "failed";
+      const isProcessed = i < 58;
+      const status = !isProcessed ? "queued" : i < 38 ? "read" : i < 48 ? "delivered" : i < 53 ? "sent" : "failed";
       return {
         campaignId: campRunning.id,
         contactId: c.id,
@@ -381,6 +387,22 @@ async function seed() {
   console.log(`Created ${runningMessages.length} messages for running campaign`);
 
   const dryRunContacts = contacts.slice(0, 17);
+  const dryRunMessages = await db.insert(messagesTable).values(
+    dryRunContacts.map((c, i) => ({
+      campaignId: campDryRun.id,
+      contactId: c.id,
+      externalMessageId: `ext-dr-${i + 1}`,
+      provider: "mock",
+      requestPayload: { to: c.normalizedPhone, body: `Oi ${c.name}! Sentimos sua falta.` },
+      responsePayload: { messageId: `ext-dr-${i + 1}` },
+      lastStatus: "read" as string,
+      errorMessage: null,
+      retryCount: 0,
+      createdAt: daysAgo(3),
+      updatedAt: daysAgo(3),
+    }))
+  ).returning();
+
   await db.insert(campaignContactsTable).values(
     dryRunContacts.map((c) => ({
       campaignId: campDryRun.id,
@@ -395,7 +417,141 @@ async function seed() {
     }))
   );
 
-  console.log("Created campaign contacts for dry run campaign");
+  const dryRunEvents: Array<{ messageId: number; status: string; description: string | null; createdAt: Date }> = [];
+  for (const msg of dryRunMessages) {
+    dryRunEvents.push({ messageId: msg.id, status: "queued", description: null, createdAt: daysAgo(3) });
+    dryRunEvents.push({ messageId: msg.id, status: "sent", description: "Dry-run: simulated send", createdAt: daysAgo(3) });
+    dryRunEvents.push({ messageId: msg.id, status: "delivered", description: "Dry-run: simulated delivery", createdAt: daysAgo(3) });
+    dryRunEvents.push({ messageId: msg.id, status: "read", description: "Dry-run: simulated read", createdAt: daysAgo(3) });
+  }
+  if (dryRunEvents.length > 0) {
+    await db.insert(messageEventsTable).values(dryRunEvents.map((e) => ({
+      messageId: e.messageId, status: e.status, description: e.description, eventPayload: {}, createdAt: e.createdAt,
+    })));
+  }
+
+  console.log(`Created ${dryRunMessages.length} messages for dry-run campaign`);
+
+  const pausedContacts = contacts.slice(0, 28);
+  const pausedStatuses = ["read", "read", "read", "delivered", "delivered", "sent", "failed"] as const;
+  const pausedMessages = await db.insert(messagesTable).values(
+    pausedContacts.map((c, i) => {
+      const status = pausedStatuses[i % pausedStatuses.length];
+      return {
+        campaignId: campPaused.id,
+        contactId: c.id,
+        externalMessageId: `ext-flash-${i + 1}`,
+        provider: "mock",
+        requestPayload: { to: c.normalizedPhone, body: `${c.name}, oferta relâmpago! 30% OFF com cupom FLASH30.` },
+        responsePayload: { messageId: `ext-flash-${i + 1}` },
+        lastStatus: status as string,
+        errorMessage: status === "failed" ? "Network unreachable" : null,
+        retryCount: status === "failed" ? 1 : 0,
+        createdAt: daysAgo(2),
+        updatedAt: daysAgo(1),
+      };
+    })
+  ).returning();
+
+  await db.insert(campaignContactsTable).values(
+    contacts.map((c, i) => {
+      const isProcessed = i < 28;
+      const status = !isProcessed ? "queued" : pausedStatuses[i % pausedStatuses.length] as string;
+      return {
+        campaignId: campPaused.id,
+        contactId: c.id,
+        renderedMessage: `${c.name}, oferta relâmpago só esse fim de semana! Aproveite 30% OFF com cupom FLASH30.`,
+        status,
+        queuedAt: daysAgo(2),
+        sentAt: isProcessed ? daysAgo(2) : null,
+        deliveredAt: isProcessed && ["delivered", "read"].includes(status) ? daysAgo(2) : null,
+        readAt: isProcessed && status === "read" ? daysAgo(1) : null,
+        failedAt: isProcessed && status === "failed" ? daysAgo(2) : null,
+      };
+    })
+  );
+
+  const pausedEvents: Array<{ messageId: number; status: string; description: string | null; createdAt: Date }> = [];
+  for (const msg of pausedMessages) {
+    pausedEvents.push({ messageId: msg.id, status: "queued", description: null, createdAt: daysAgo(2) });
+    pausedEvents.push({ messageId: msg.id, status: "sent", description: "Delivered to WhatsApp API", createdAt: daysAgo(2) });
+    if (msg.lastStatus === "delivered" || msg.lastStatus === "read") {
+      pausedEvents.push({ messageId: msg.id, status: "delivered", description: "Device confirmed delivery", createdAt: daysAgo(2) });
+    }
+    if (msg.lastStatus === "read") {
+      pausedEvents.push({ messageId: msg.id, status: "read", description: "Message opened by recipient", createdAt: daysAgo(1) });
+    }
+    if (msg.lastStatus === "failed") {
+      pausedEvents.push({ messageId: msg.id, status: "failed", description: "Network unreachable", createdAt: daysAgo(2) });
+    }
+  }
+  if (pausedEvents.length > 0) {
+    await db.insert(messageEventsTable).values(pausedEvents.map((e) => ({
+      messageId: e.messageId, status: e.status, description: e.description, eventPayload: {}, createdAt: e.createdAt,
+    })));
+  }
+
+  console.log(`Created ${pausedMessages.length} messages for paused campaign`);
+
+  const cancelledContacts = contacts.slice(0, 13);
+  const cancelledStatuses = ["read", "read", "delivered", "sent", "failed"] as const;
+  const cancelledMessages = await db.insert(messagesTable).values(
+    cancelledContacts.map((c, i) => {
+      const status = cancelledStatuses[i % cancelledStatuses.length];
+      return {
+        campaignId: campCancelled.id,
+        contactId: c.id,
+        externalMessageId: `ext-easter-${i + 1}`,
+        provider: "mock",
+        requestPayload: { to: c.normalizedPhone, body: `Feliz Páscoa, ${c.name}! Até 50% OFF na linha Easter Collection.` },
+        responsePayload: { messageId: `ext-easter-${i + 1}` },
+        lastStatus: status as string,
+        errorMessage: status === "failed" ? "User blocked sender" : null,
+        retryCount: 0,
+        createdAt: daysAgo(5),
+        updatedAt: daysAgo(4),
+      };
+    })
+  ).returning();
+
+  await db.insert(campaignContactsTable).values(
+    cancelledContacts.map((c, i) => {
+      const status = cancelledStatuses[i % cancelledStatuses.length] as string;
+      return {
+        campaignId: campCancelled.id,
+        contactId: c.id,
+        renderedMessage: `Feliz Páscoa, ${c.name}! Temos uma surpresa especial — até 50% OFF na linha Easter Collection.`,
+        status,
+        queuedAt: daysAgo(5),
+        sentAt: daysAgo(5),
+        deliveredAt: ["delivered", "read"].includes(status) ? daysAgo(4) : null,
+        readAt: status === "read" ? daysAgo(4) : null,
+        failedAt: status === "failed" ? daysAgo(5) : null,
+      };
+    })
+  );
+
+  const cancelledEvents: Array<{ messageId: number; status: string; description: string | null; createdAt: Date }> = [];
+  for (const msg of cancelledMessages) {
+    cancelledEvents.push({ messageId: msg.id, status: "queued", description: null, createdAt: daysAgo(5) });
+    cancelledEvents.push({ messageId: msg.id, status: "sent", description: "Delivered to WhatsApp API", createdAt: daysAgo(5) });
+    if (msg.lastStatus === "delivered" || msg.lastStatus === "read") {
+      cancelledEvents.push({ messageId: msg.id, status: "delivered", description: "Device confirmed delivery", createdAt: daysAgo(4) });
+    }
+    if (msg.lastStatus === "read") {
+      cancelledEvents.push({ messageId: msg.id, status: "read", description: "Message opened by recipient", createdAt: daysAgo(4) });
+    }
+    if (msg.lastStatus === "failed") {
+      cancelledEvents.push({ messageId: msg.id, status: "failed", description: "User blocked sender", createdAt: daysAgo(5) });
+    }
+  }
+  if (cancelledEvents.length > 0) {
+    await db.insert(messageEventsTable).values(cancelledEvents.map((e) => ({
+      messageId: e.messageId, status: e.status, description: e.description, eventPayload: {}, createdAt: e.createdAt,
+    })));
+  }
+
+  console.log(`Created ${cancelledMessages.length} messages for cancelled campaign`);
 
   await db.insert(providerConfigsTable).values({
     providerName: "mock",
@@ -406,12 +562,15 @@ async function seed() {
     isActive: "true",
   }).onConflictDoNothing();
 
+  const totalMessages = camp1Messages.length + camp2Messages.length + runningMessages.length
+    + dryRunMessages.length + pausedMessages.length + cancelledMessages.length;
+
   console.log("Created provider config");
   console.log("\nSeed complete!");
   console.log(`  - ${contacts.length} contacts`);
   console.log("  - 3 contact lists");
-  console.log("  - 5 campaigns (2 completed, 1 running, 1 dry-run, 1 draft)");
-  console.log(`  - ${camp1Messages.length + camp2Messages.length + runningMessages.length} messages with event logs`);
+  console.log(`  - ${campaigns.length} campaigns (completed x2, running, dry-run, draft, paused, cancelled)`);
+  console.log(`  - ${totalMessages} messages with event histories`);
 
   process.exit(0);
 }
