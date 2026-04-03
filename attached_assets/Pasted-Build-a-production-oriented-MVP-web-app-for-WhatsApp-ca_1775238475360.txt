@@ -1,0 +1,427 @@
+Build a production-oriented MVP web app for WhatsApp campaign operations.
+
+Project goal:
+Create a clean, reliable, operator-grade web app that is better than Deropo in execution quality, while focusing ONLY on 3 core modules:
+1. Campaigns
+2. Contacts
+3. Tracking
+
+This is not a generic marketing tool. It is a focused WhatsApp campaign operations dashboard for sending personalized campaigns and tracking outcomes with clarity.
+
+Core product philosophy:
+- Be better than Deropo by being cleaner, safer, and easier to trust
+- Do NOT add chatbot, CRM, AI reply, warmup, group grabber, autoresponder, or multi-account rotation in v1
+- Win through reliability, tracking clarity, data quality, and UX
+- The app should feel like a serious internal operations product, not a flashy template
+- The app should be ready to later connect with Green API or Evolution API
+
+Primary user story:
+A user uploads/imports contacts, creates a campaign using a template like:
+"Hi {{name}}, ..."
+sets a delay between messages, previews sample outputs, launches the campaign, and later monitors live status:
+sent / delivered / read / failed / noAccount
+with logs, filters, and export.
+
+Tech stack requirements:
+- Full-stack web app
+- Use Node.js + Express backend
+- Use SQLite for MVP database
+- Use simple server-rendered UI with EJS OR a clean React frontend with Express API
+- Prefer the simplest stack that Replit can generate fast and that I can later move to GitHub and deploy on Oracle VPS
+- Add a `.env.example`
+- Add a clean `README.md`
+- Add scripts for local run
+- Structure code cleanly for future VPS deployment with PM2 or Docker
+- Keep API integration abstracted behind a provider service layer
+- Add a mock provider initially if real provider credentials are not configured
+
+Provider abstraction:
+Design the backend so that WhatsApp provider can be swapped later.
+Create provider interface/service like:
+- sendMessage(contact, renderedMessage)
+- getStatus(messageId)
+- handleWebhook(payload)
+
+Prepare for Green API / Evolution API integration later.
+
+LOCKED MVP MODULES
+
+1) CAMPAIGNS
+Build these features:
+- Campaign list page
+- Create campaign page
+- Campaign detail page
+- Campaign status summary cards
+- Template editor with variable support like {{name}}
+- Variable preview panel with 3-5 sample contacts
+- Delay/throttling settings (e.g. X seconds between sends)
+- Test send / dry run mode
+- Launch campaign
+- Pause campaign
+- Resume campaign
+- Cancel campaign
+- Campaign history
+- Campaign-level metrics:
+  total contacts
+  queued
+  sent
+  delivered
+  read
+  failed
+  noAccount
+
+Preflight validation before launch:
+- missing required fields
+- invalid phone numbers
+- duplicate contacts
+- empty template variables
+- campaign estimated duration based on delay and contact count
+
+Campaign states:
+- draft
+- validating
+- ready
+- running
+- paused
+- completed
+- failed
+- cancelled
+
+2) CONTACTS
+Build these features:
+- Contacts list page
+- Add contact manually
+- Edit contact
+- Delete/archive contact
+- CSV import page
+- Import mapping step
+- Import preview step
+- Import result page
+- Contact fields:
+  id
+  name
+  phone
+  email (optional)
+  tags
+  custom_fields JSON
+  normalized_phone
+  validation_status
+  created_at
+  updated_at
+- Search and filter contacts
+- Contact lists / segments
+- Dedupe logic
+- Normalize phone numbers
+- Validate phone format before campaign use
+
+Import flow:
+- upload CSV
+- map columns
+- preview rows
+- detect duplicates
+- detect invalid phones
+- allow skip duplicates or merge duplicates
+- save import report
+
+3) TRACKING
+This is the strongest module and must be the main differentiator.
+
+Build these features:
+- Tracking dashboard
+- Campaign tracking page
+- Message event timeline per recipient
+- Live status counters
+- Filters by status:
+  queued, sent, delivered, read, failed, noAccount
+- Failure reason display
+- Retry failed messages
+- Export filtered logs as CSV
+- Search by contact or phone
+- Show message lifecycle:
+  queued → sent → delivered → read
+  or
+  queued → failed (with reason)
+
+Tracking data must support:
+- message record
+- external message id
+- provider name
+- provider response payload
+- last status
+- status history
+- timestamps for each event
+- error description
+- retry count
+
+Status meaning helper UI:
+For each status, show a short explanation in the UI.
+Example:
+- sent = provider accepted / dispatched
+- delivered = recipient device or WhatsApp delivery confirmed
+- read = recipient read receipt received
+- failed = sending failed
+- noAccount = target number has no WhatsApp account
+
+DESIGN REQUIREMENTS
+This must NOT look like generic AI SaaS UI.
+
+Visual direction:
+- clean, restrained, premium internal ops dashboard
+- inspired by Linear / Vercel / Stripe dashboard quality
+- left-aligned layout, not center-heavy
+- subtle, neutral surfaces
+- one accent color only
+- excellent information hierarchy
+- dark mode + light mode
+- mobile responsive
+- strong table and detail drawer UX
+- operator-grade dashboard feel
+
+Avoid:
+- purple gradients
+- glowing blobs
+- generic 3-card AI landing page look
+- icon circles everywhere
+- random marketing fluff copy
+- oversized rounded cards everywhere
+- decorative clutter
+
+Use:
+- compact dashboard layout
+- elegant typography
+- excellent spacing
+- filters and tables that feel serious and fast
+- subtle badges for statuses
+- clear detail panels
+- strong empty states and error states
+
+Suggested pages/screens:
+- /login (simple placeholder auth if needed)
+- /dashboard
+- /campaigns
+- /campaigns/new
+- /campaigns/:id
+- /contacts
+- /contacts/import
+- /tracking
+- /tracking/messages/:id
+- /settings/providers
+
+Dashboard should show:
+- total campaigns
+- total contacts
+- active campaign count
+- sent/delivered/read/failed summary
+- recent campaigns
+- recent failures
+- quick actions
+
+DATABASE DESIGN
+Create SQLite schema and migrations for tables like:
+- users
+- contacts
+- contact_lists
+- contact_list_members
+- imports
+- import_rows
+- campaigns
+- campaign_contacts
+- messages
+- message_events
+- provider_configs
+- audit_logs
+
+Suggested core tables:
+
+contacts
+- id
+- name
+- phone
+- normalized_phone
+- email
+- tags
+- custom_fields
+- validation_status
+- created_at
+- updated_at
+
+campaigns
+- id
+- name
+- template
+- status
+- delay_seconds
+- provider
+- list_id
+- total_contacts
+- queued_count
+- sent_count
+- delivered_count
+- read_count
+- failed_count
+- no_account_count
+- dry_run
+- created_at
+- updated_at
+- started_at
+- finished_at
+
+campaign_contacts
+- id
+- campaign_id
+- contact_id
+- rendered_message
+- status
+- validation_error
+- queued_at
+- sent_at
+- delivered_at
+- read_at
+- failed_at
+
+messages
+- id
+- campaign_id
+- contact_id
+- external_message_id
+- provider
+- request_payload
+- response_payload
+- last_status
+- error_message
+- retry_count
+- created_at
+- updated_at
+
+message_events
+- id
+- message_id
+- status
+- event_payload
+- description
+- created_at
+
+provider_configs
+- id
+- provider_name
+- base_url
+- instance_id
+- api_token
+- webhook_secret
+- is_active
+- created_at
+- updated_at
+
+API ROUTES
+Implement clean backend routes such as:
+
+Campaigns
+- GET /api/campaigns
+- POST /api/campaigns
+- GET /api/campaigns/:id
+- POST /api/campaigns/:id/validate
+- POST /api/campaigns/:id/launch
+- POST /api/campaigns/:id/pause
+- POST /api/campaigns/:id/resume
+- POST /api/campaigns/:id/cancel
+- GET /api/campaigns/:id/report
+
+Contacts
+- GET /api/contacts
+- POST /api/contacts
+- PATCH /api/contacts/:id
+- DELETE /api/contacts/:id
+- POST /api/contacts/import
+- POST /api/contacts/import/preview
+- GET /api/contact-lists
+
+Tracking
+- GET /api/tracking/overview
+- GET /api/tracking/messages
+- GET /api/tracking/messages/:id
+- GET /api/tracking/export
+- POST /api/tracking/messages/:id/retry
+
+Providers
+- GET /api/providers
+- POST /api/providers/config
+- POST /api/providers/test
+- POST /api/webhooks/:provider
+
+BACKGROUND JOBS
+Implement a simple campaign runner service:
+- When campaign launches, queue campaign contacts
+- Send one by one with delay_seconds
+- Store message + provider response
+- Update campaign counters
+- Support pause/resume/cancel
+- Record all events
+- If no real provider config exists, use a mock provider that simulates realistic statuses over time
+
+MOCK PROVIDER
+For MVP demo, create a mock provider:
+- accepts outgoing message
+- returns fake external_message_id
+- later simulates statuses:
+  sent / delivered / read / failed / noAccount
+- inject some random failures
+- helps demo the tracking module fully
+
+UX DETAILS THAT MUST EXIST
+- campaign wizard should feel guided
+- preview before sending is mandatory
+- tables should have search, filters, pagination
+- status badges must be color-coded but subtle
+- every failed message should show a reason
+- export must work
+- empty states should be useful, not generic
+- destructive actions need confirmation
+- loading states and skeletons required
+- dark mode required
+- mobile layouts required
+- toasts only for minor feedback; important info must be inline
+
+COPY STYLE
+Use plain language.
+Avoid fake marketing language.
+Write like a serious internal ops tool.
+Buttons like:
+- Create campaign
+- Import contacts
+- Validate campaign
+- Launch campaign
+- Pause sending
+- Resume campaign
+- Export failed
+- Retry failed
+
+DELIVERABLES
+Generate:
+1. complete app code
+2. database schema
+3. seed data
+4. mock provider
+5. README with setup instructions
+6. `.env.example`
+7. clear file structure
+8. sample CSV for contacts import
+9. sample seeded campaigns and messages for demo
+10. a clean dashboard UI
+
+IMPORTANT BUILD RULES
+- prioritize working MVP over fancy architecture
+- keep code readable and modular
+- no unnecessary abstraction
+- no half-finished features
+- every listed feature should be visibly implemented
+- if time is limited, fully finish Campaigns + Contacts + Tracking with mock provider instead of adding extra modules
+- make the app easy to move from Replit to GitHub to Oracle VPS
+- do not build a landing page first; build the actual product
+- do not add features outside the 3 buckets
+- optimize the product to be better than Deropo in these 3 buckets specifically
+
+At the end, provide:
+- folder structure
+- setup steps
+- how to run in Replit
+- how to deploy later on a VPS with Docker 
