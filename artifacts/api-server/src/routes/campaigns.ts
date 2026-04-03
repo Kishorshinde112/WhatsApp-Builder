@@ -115,13 +115,19 @@ router.patch("/campaigns/:id", async (req, res) => {
     return res.status(400).json({ error: "Can only edit campaigns in draft status" });
   }
 
+  const parsed = UpdateCampaignBody.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: "Validation failed", details: parsed.error.errors });
+  }
+
+  const body = parsed.data;
   const updates: Partial<typeof existing> = {};
-  if (req.body.name != null) updates.name = req.body.name;
-  if (req.body.template != null) updates.template = req.body.template;
-  if (req.body.delaySeconds != null) updates.delaySeconds = req.body.delaySeconds;
-  if (req.body.provider != null) updates.provider = req.body.provider;
-  if (req.body.listId != null) updates.listId = req.body.listId;
-  if (req.body.dryRun != null) updates.dryRun = req.body.dryRun;
+  if (body.name != null) updates.name = body.name;
+  if (body.template != null) updates.template = body.template;
+  if (body.delaySeconds != null) updates.delaySeconds = body.delaySeconds;
+  if (body.provider != null) updates.provider = body.provider;
+  if (body.listId != null) updates.listId = body.listId;
+  if (body.dryRun != null) updates.dryRun = body.dryRun;
 
   const [updated] = await db
     .update(campaignsTable)
@@ -130,6 +136,19 @@ router.patch("/campaigns/:id", async (req, res) => {
     .returning();
 
   return res.json(updated);
+});
+
+router.delete("/campaigns/:id", async (req, res) => {
+  const id = parseInt(req.params.id);
+  const [existing] = await db.select().from(campaignsTable).where(eq(campaignsTable.id, id));
+  if (!existing) return res.status(404).json({ error: "Campaign not found" });
+
+  if (!["draft", "cancelled"].includes(existing.status)) {
+    return res.status(400).json({ error: "Only draft or cancelled campaigns can be deleted" });
+  }
+
+  await db.delete(campaignsTable).where(eq(campaignsTable.id, id));
+  return res.json({ success: true, message: "Campaign deleted" });
 });
 
 router.post("/campaigns/:id/validate", async (req, res) => {

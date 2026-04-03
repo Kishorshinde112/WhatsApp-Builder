@@ -10,6 +10,7 @@ import {
   importRowsTable,
 } from "@workspace/db";
 import { eq, ilike, or, sql, and } from "drizzle-orm";
+import { z } from "zod";
 import { CreateContactBody, UpdateContactBody } from "@workspace/api-zod";
 
 const router = Router();
@@ -120,17 +121,23 @@ router.patch("/contacts/:id", async (req, res) => {
   const [existing] = await db.select().from(contactsTable).where(eq(contactsTable.id, id));
   if (!existing) return res.status(404).json({ error: "Contact not found" });
 
-  const updates: Partial<typeof existing> = {};
-  if (req.body.name != null) updates.name = req.body.name;
-  if (req.body.phone != null) {
-    updates.phone = req.body.phone;
-    updates.normalizedPhone = normalizePhone(req.body.phone);
-    updates.validationStatus = isValidPhone(req.body.phone) ? "valid" : "invalid";
+  const parsed = UpdateContactBody.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: "Validation failed", details: parsed.error.errors });
   }
-  if (req.body.email != null) updates.email = req.body.email;
-  if (req.body.tags != null) updates.tags = req.body.tags;
-  if (req.body.customFields != null) updates.customFields = req.body.customFields;
-  if (req.body.validationStatus != null) updates.validationStatus = req.body.validationStatus;
+
+  const body = parsed.data;
+  const updates: Partial<typeof existing> = {};
+  if (body.name != null) updates.name = body.name;
+  if (body.phone != null) {
+    updates.phone = body.phone;
+    updates.normalizedPhone = normalizePhone(body.phone);
+    updates.validationStatus = isValidPhone(body.phone) ? "valid" : "invalid";
+  }
+  if (body.email != null) updates.email = body.email;
+  if (body.tags != null) updates.tags = body.tags;
+  if (body.customFields != null) updates.customFields = body.customFields as Record<string, string>;
+  if (body.validationStatus != null) updates.validationStatus = body.validationStatus;
 
   const [updated] = await db
     .update(contactsTable)
@@ -346,6 +353,35 @@ router.get("/contact-lists/:id", async (req, res) => {
 
   if (!list) return res.status(404).json({ error: "Contact list not found" });
   return res.json(list);
+});
+
+const UpdateContactListBody = z.object({
+  name: z.string().min(1).optional(),
+  description: z.string().nullable().optional(),
+});
+
+router.patch("/contact-lists/:id", async (req, res) => {
+  const id = parseInt(req.params.id);
+  const [existing] = await db.select().from(contactListsTable).where(eq(contactListsTable.id, id));
+  if (!existing) return res.status(404).json({ error: "Contact list not found" });
+
+  const parsed = UpdateContactListBody.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: "Validation failed", details: parsed.error.errors });
+  }
+
+  const body = parsed.data;
+  const updates: Record<string, unknown> = {};
+  if (body.name != null) updates.name = body.name;
+  if ("description" in body) updates.description = body.description ?? null;
+
+  const [updated] = await db
+    .update(contactListsTable)
+    .set({ ...updates, updatedAt: new Date() })
+    .where(eq(contactListsTable.id, id))
+    .returning();
+
+  return res.json(updated);
 });
 
 router.delete("/contact-lists/:id", async (req, res) => {
