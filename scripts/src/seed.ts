@@ -88,7 +88,7 @@ async function seed() {
   const now = new Date();
   const daysAgo = (n: number) => new Date(now.getTime() - n * 24 * 60 * 60 * 1000);
 
-  const [campCompleted1, campCompleted2, campRunning, campDryRun, campDraft] = await db.insert(campaignsTable).values([
+  const campaigns = await db.insert(campaignsTable).values([
     {
       name: "Black Friday Promo",
       template: "Olá {{name}}! Aproveite nossos descontos exclusivos de Black Friday. Acesse: https://exemplo.com/bf",
@@ -179,9 +179,53 @@ async function seed() {
       createdAt: daysAgo(0),
       updatedAt: new Date(),
     },
+    {
+      name: "Weekend Flash Sale",
+      template: "{{name}}, oferta relâmpago só esse fim de semana! Aproveite 30% OFF com cupom FLASH30.",
+      status: "paused",
+      provider: "mock",
+      listId: listAll.id,
+      dryRun: "false",
+      delaySeconds: 5,
+      totalContacts: 50,
+      queuedCount: 22,
+      sentCount: 5,
+      deliveredCount: 14,
+      readCount: 8,
+      failedCount: 1,
+      noAccountCount: 0,
+      createdAt: daysAgo(2),
+      updatedAt: daysAgo(1),
+    },
+    {
+      name: "Easter Special Offer",
+      template: "Feliz Páscoa, {{name}}! Temos uma surpresa especial pra você — até 50% OFF na linha Easter Collection.",
+      status: "cancelled",
+      provider: "mock",
+      listId: listVip.id,
+      dryRun: "false",
+      delaySeconds: 5,
+      totalContacts: 17,
+      queuedCount: 0,
+      sentCount: 5,
+      deliveredCount: 4,
+      readCount: 3,
+      failedCount: 1,
+      noAccountCount: 0,
+      createdAt: daysAgo(5),
+      updatedAt: daysAgo(4),
+    },
   ]).returning();
 
-  console.log("Created 5 campaigns");
+  const campCompleted1 = campaigns[0];
+  const campCompleted2 = campaigns[1];
+  const campRunning = campaigns[2];
+  const campDryRun = campaigns[3];
+  const campDraft = campaigns[4];
+  const campPaused = campaigns[5];
+  const campCancelled = campaigns[6];
+
+  console.log(`Created ${campaigns.length} campaigns`);
 
   const msgStatuses = ["read", "read", "read", "read", "delivered", "sent", "failed", "noAccount"] as const;
   const camp1Contacts = contacts.slice(0, 50);

@@ -1,7 +1,15 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { providerConfigsTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import {
+  providerConfigsTable,
+  messagesTable,
+  messageEventsTable,
+  campaignContactsTable,
+  campaignsTable,
+} from "@workspace/db";
+import { eq, and, sql } from "drizzle-orm";
+import { logger } from "../lib/logger.js";
+import { mockProvider } from "../services/provider/index.js";
 
 const router = Router();
 
@@ -129,7 +137,78 @@ router.post("/providers/test", async (req, res) => {
 router.post("/webhooks/:provider", async (req, res) => {
   const { provider } = req.params;
   req.log.info({ provider, body: req.body }, "Webhook received");
-  return res.json({ success: true, message: "Webhook received" });
+
+  try {
+    const statusEvent = await mockProvider.handleWebhook(req.body as Record<string, unknown>);
+
+    if (!statusEvent || !statusEvent.externalMessageId) {
+      return res.json({ success: true, message: "Webhook acknowledged (no actionable event)" });
+    }
+
+    const [message] = await db
+      .select()
+      .from(messagesTable)
+      .where(eq(messagesTable.externalMessageId, statusEvent.externalMessageId));
+
+    if (!message) {
+      req.log.warn({ externalMessageId: statusEvent.externalMessageId }, "Webhook: message not found");
+      return res.json({ success: true, message: "Webhook acknowledged (message not tracked)" });
+    }
+
+    await db
+      .update(messagesTable)
+      .set({ lastStatus: statusEvent.status, errorMessage: statusEvent.errorMessage ?? null, updatedAt: new Date() })
+      .where(eq(messagesTable.id, message.id));
+
+    await db.insert(messageEventsTable).values({
+      messageId: message.id,
+      status: statusEvent.status,
+      description: statusEvent.errorMessage ?? `Status updated to ${statusEvent.status} via webhook`,
+      eventPayload: { provider, rawPayload: req.body },
+    });
+
+    await db
+      .update(campaignContactsTable)
+      .set({
+        status: statusEvent.status,
+        ...(statusEvent.status === "sent" ? { sentAt: statusEvent.timestamp } : {}),
+        ...(statusEvent.status === "delivered" ? { deliveredAt: statusEvent.timestamp } : {}),
+        ...(statusEvent.status === "read" ? { readAt: statusEvent.timestamp } : {}),
+        ...((statusEvent.status === "failed" || statusEvent.status === "noAccount") ? { failedAt: statusEvent.timestamp } : {}),
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(campaignContactsTable.campaignId, message.campaignId),
+          eq(campaignContactsTable.contactId, message.contactId)
+        )
+      );
+
+    const counts = await db
+      .select({ status: campaignContactsTable.status, count: sql<number>`count(*)` })
+      .from(campaignContactsTable)
+      .where(eq(campaignContactsTable.campaignId, message.campaignId))
+      .groupBy(campaignContactsTable.status);
+
+    const counter = { queuedCount: 0, sentCount: 0, deliveredCount: 0, readCount: 0, failedCount: 0, noAccountCount: 0 };
+    for (const row of counts) {
+      const c = Number(row.count);
+      if (row.status === "queued") counter.queuedCount = c;
+      else if (row.status === "sent") counter.sentCount = c;
+      else if (row.status === "delivered") counter.deliveredCount = c;
+      else if (row.status === "read") counter.readCount = c;
+      else if (row.status === "failed") counter.failedCount = c;
+      else if (row.status === "noAccount") counter.noAccountCount = c;
+    }
+
+    await db.update(campaignsTable).set({ ...counter, updatedAt: new Date() }).where(eq(campaignsTable.id, message.campaignId));
+
+    req.log.info({ messageId: message.id, status: statusEvent.status }, "Webhook: message status updated");
+    return res.json({ success: true, message: "Status updated", messageId: message.id, status: statusEvent.status });
+  } catch (err) {
+    logger.error({ err }, "Webhook processing error");
+    return res.json({ success: true, message: "Webhook acknowledged (processing error)" });
+  }
 });
 
 export default router;

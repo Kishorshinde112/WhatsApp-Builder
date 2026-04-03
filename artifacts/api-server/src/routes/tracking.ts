@@ -45,9 +45,9 @@ router.get("/tracking/overview", async (_req, res) => {
   const delivered = result.delivered + result.read;
   const total = result.totalMessages;
   if (total > 0) {
-    result.deliveryRate = Math.round((delivered / total) * 100) / 100;
-    result.readRate = Math.round((result.read / total) * 100) / 100;
-    result.failureRate = Math.round(((result.failed + result.noAccount) / total) * 100) / 100;
+    result.deliveryRate = Math.round((delivered / total) * 100);
+    result.readRate = Math.round((result.read / total) * 100);
+    result.failureRate = Math.round(((result.failed + result.noAccount) / total) * 100);
   }
 
   return res.json(result);
@@ -365,10 +365,10 @@ router.get("/dashboard", async (_req, res) => {
 
   if (messageSummary.totalMessages > 0) {
     const delivered = messageSummary.delivered + messageSummary.read;
-    messageSummary.deliveryRate = Math.round((delivered / messageSummary.totalMessages) * 100) / 100;
-    messageSummary.readRate = Math.round((messageSummary.read / messageSummary.totalMessages) * 100) / 100;
+    messageSummary.deliveryRate = Math.round((delivered / messageSummary.totalMessages) * 100);
+    messageSummary.readRate = Math.round((messageSummary.read / messageSummary.totalMessages) * 100);
     messageSummary.failureRate =
-      Math.round(((messageSummary.failed + messageSummary.noAccount) / messageSummary.totalMessages) * 100) / 100;
+      Math.round(((messageSummary.failed + messageSummary.noAccount) / messageSummary.totalMessages) * 100);
   }
 
   const recentCampaigns = await db

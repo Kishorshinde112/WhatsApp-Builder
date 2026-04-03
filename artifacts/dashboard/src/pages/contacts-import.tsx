@@ -89,9 +89,13 @@ export default function ContactsImport() {
       return;
     }
     setImporting(true);
+    const reversedMapping: Record<string, string> = {};
+    for (const [field, csvCol] of Object.entries(mapping)) {
+      if (csvCol) reversedMapping[csvCol] = field;
+    }
     const formData = new FormData();
     formData.append("file", file);
-    formData.append("columnMapping", JSON.stringify(mapping));
+    formData.append("columnMapping", JSON.stringify(reversedMapping));
     if (listId) formData.append("listId", listId);
     formData.append("skipDuplicates", String(skipDuplicates));
 

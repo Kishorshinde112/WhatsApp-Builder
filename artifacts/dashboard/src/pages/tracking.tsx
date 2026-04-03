@@ -76,9 +76,9 @@ export default function Tracking() {
         {overview ? stats.map((s) => (
           <button
             key={s.label}
-            onClick={() => setStatus(s.label.toLowerCase().replace(" ", "_"))}
+            onClick={() => setStatus(s.label === "No Account" ? "noAccount" : s.label.toLowerCase())}
             className={`rounded-md border bg-card p-3 text-left hover:border-primary transition-colors ${
-              status === s.label.toLowerCase().replace(" ", "_") ? "border-primary ring-1 ring-primary" : ""
+              status === (s.label === "No Account" ? "noAccount" : s.label.toLowerCase()) ? "border-primary ring-1 ring-primary" : ""
             }`}
             data-testid={`status-stat-${s.label.toLowerCase()}`}
           >
