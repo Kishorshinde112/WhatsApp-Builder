@@ -51,6 +51,7 @@ import type {
   TrackingOverview,
   UpdateCampaignBody,
   UpdateContactBody,
+  UpdateContactListBody,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -1015,6 +1016,93 @@ export function useGetContactList<
 }
 
 /**
+ * @summary Update contact list
+ */
+export const getUpdateContactListUrl = (id: number) => {
+  return `/api/contact-lists/${id}`;
+};
+
+export const updateContactList = async (
+  id: number,
+  updateContactListBody: UpdateContactListBody,
+  options?: RequestInit,
+): Promise<ContactList> => {
+  return customFetch<ContactList>(getUpdateContactListUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updateContactListBody),
+  });
+};
+
+export const getUpdateContactListMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateContactList>>,
+    TError,
+    { id: number; data: BodyType<UpdateContactListBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateContactList>>,
+  TError,
+  { id: number; data: BodyType<UpdateContactListBody> },
+  TContext
+> => {
+  const mutationKey = ["updateContactList"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateContactList>>,
+    { id: number; data: BodyType<UpdateContactListBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateContactList(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateContactListMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateContactList>>
+>;
+export type UpdateContactListMutationBody = BodyType<UpdateContactListBody>;
+export type UpdateContactListMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Update contact list
+ */
+export const useUpdateContactList = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateContactList>>,
+    TError,
+    { id: number; data: BodyType<UpdateContactListBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateContactList>>,
+  TError,
+  { id: number; data: BodyType<UpdateContactListBody> },
+  TContext
+> => {
+  return useMutation(getUpdateContactListMutationOptions(options));
+};
+
+/**
  * @summary Delete contact list
  */
 export const getDeleteContactListUrl = (id: number) => {
@@ -1450,6 +1538,90 @@ export const useUpdateCampaign = <
   TContext
 > => {
   return useMutation(getUpdateCampaignMutationOptions(options));
+};
+
+/**
+ * @summary Delete campaign (draft or cancelled only)
+ */
+export const getDeleteCampaignUrl = (id: number) => {
+  return `/api/campaigns/${id}`;
+};
+
+export const deleteCampaign = async (
+  id: number,
+  options?: RequestInit,
+): Promise<SuccessResponse> => {
+  return customFetch<SuccessResponse>(getDeleteCampaignUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteCampaignMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteCampaign>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteCampaign>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["deleteCampaign"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteCampaign>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteCampaign(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteCampaignMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteCampaign>>
+>;
+
+export type DeleteCampaignMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Delete campaign (draft or cancelled only)
+ */
+export const useDeleteCampaign = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteCampaign>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteCampaign>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getDeleteCampaignMutationOptions(options));
 };
 
 /**
@@ -2558,6 +2730,81 @@ export function useGetProviders<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetProvidersQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get current provider configuration
+ */
+export const getGetProviderConfigUrl = () => {
+  return `/api/providers/config`;
+};
+
+export const getProviderConfig = async (
+  options?: RequestInit,
+): Promise<ProviderConfig> => {
+  return customFetch<ProviderConfig>(getGetProviderConfigUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetProviderConfigQueryKey = () => {
+  return [`/api/providers/config`] as const;
+};
+
+export const getGetProviderConfigQueryOptions = <
+  TData = Awaited<ReturnType<typeof getProviderConfig>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getProviderConfig>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetProviderConfigQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getProviderConfig>>
+  > = ({ signal }) => getProviderConfig({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getProviderConfig>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetProviderConfigQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getProviderConfig>>
+>;
+export type GetProviderConfigQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get current provider configuration
+ */
+
+export function useGetProviderConfig<
+  TData = Awaited<ReturnType<typeof getProviderConfig>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getProviderConfig>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetProviderConfigQueryOptions(options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

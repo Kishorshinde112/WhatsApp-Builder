@@ -7,7 +7,7 @@ import {
   contactListMembersTable,
   contactListsTable,
 } from "@workspace/db";
-import { eq, and, sql, inArray } from "drizzle-orm";
+import { eq, and, sql, inArray, desc } from "drizzle-orm";
 import {
   startCampaignRunner,
   pauseRunner,
@@ -56,7 +56,7 @@ router.get("/campaigns", async (req, res) => {
     .where(conditions.length > 0 ? and(...conditions) : undefined)
     .limit(limitNum)
     .offset(offset)
-    .orderBy(campaignsTable.createdAt);
+    .orderBy(desc(campaignsTable.createdAt));
 
   const [{ count }] = await db
     .select({ count: sql<number>`count(*)` })

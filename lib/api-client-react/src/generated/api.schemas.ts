@@ -88,6 +88,13 @@ export interface CreateContactListBody {
   description?: string | null;
 }
 
+export interface UpdateContactListBody {
+  /** @minLength 1 */
+  name?: string;
+  /** @nullable */
+  description?: string | null;
+}
+
 export type ImportPreviewResponseRowsItem = { [key: string]: unknown };
 
 export interface ImportPreviewResponse {

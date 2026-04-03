@@ -218,7 +218,7 @@ router.post("/contacts/import", upload.single("file"), async (req, res) => {
     const phone = mapped.phone ?? raw.phone ?? raw.Phone ?? raw.telefone ?? raw.numero ?? "";
     const name = mapped.name ?? raw.name ?? raw.Name ?? raw.nome ?? "";
 
-    if (!phone || !name) {
+    if (!phone) {
       invalidRows++;
       await db.insert(importRowsTable).values({
         importId: importRecord.id,
@@ -226,9 +226,9 @@ router.post("/contacts/import", upload.single("file"), async (req, res) => {
         rawData: raw as Record<string, unknown>,
         mappedData: mapped as Record<string, unknown>,
         status: "invalid",
-        errorMessage: "Missing required fields: name or phone",
+        errorMessage: "Missing required field: phone",
       });
-      errors.push({ row: i + 1, error: "Missing required fields" });
+      errors.push({ row: i + 1, error: "Missing required field: phone" });
       continue;
     }
 

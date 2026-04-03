@@ -50,3 +50,4 @@ export * from "./trackingOverview";
 export * from "./updateCampaignBody";
 export * from "./updateContactBody";
 export * from "./updateContactBodyCustomFields";
+export * from "./updateContactListBody";

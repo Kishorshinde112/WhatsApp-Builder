@@ -192,6 +192,27 @@ export const GetContactListResponse = zod.object({
 });
 
 /**
+ * @summary Update contact list
+ */
+export const UpdateContactListParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UpdateContactListBody = zod.object({
+  name: zod.string().min(1).optional(),
+  description: zod.string().nullish(),
+});
+
+export const UpdateContactListResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  description: zod.string().nullish(),
+  contactCount: zod.number(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+
+/**
  * @summary Delete contact list
  */
 export const DeleteContactListParams = zod.object({
@@ -327,6 +348,18 @@ export const UpdateCampaignResponse = zod.object({
   updatedAt: zod.string(),
   startedAt: zod.string().nullish(),
   finishedAt: zod.string().nullish(),
+});
+
+/**
+ * @summary Delete campaign (draft or cancelled only)
+ */
+export const DeleteCampaignParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const DeleteCampaignResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string().optional(),
 });
 
 /**
@@ -743,6 +776,19 @@ export const GetProvidersResponseItem = zod.object({
   updatedAt: zod.string(),
 });
 export const GetProvidersResponse = zod.array(GetProvidersResponseItem);
+
+/**
+ * @summary Get current provider configuration
+ */
+export const GetProviderConfigResponse = zod.object({
+  id: zod.number(),
+  providerName: zod.string(),
+  baseUrl: zod.string().nullish(),
+  instanceId: zod.string().nullish(),
+  isActive: zod.string(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
 
 /**
  * @summary Save provider configuration

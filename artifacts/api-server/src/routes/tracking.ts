@@ -7,7 +7,7 @@ import {
   contactsTable,
   campaignContactsTable,
 } from "@workspace/db";
-import { eq, and, ilike, or, sql } from "drizzle-orm";
+import { eq, and, ilike, or, sql, desc } from "drizzle-orm";
 import { mockProvider } from "../services/provider/index.js";
 
 const router = Router();
@@ -374,7 +374,7 @@ router.get("/dashboard", async (_req, res) => {
   const recentCampaigns = await db
     .select()
     .from(campaignsTable)
-    .orderBy(campaignsTable.createdAt)
+    .orderBy(desc(campaignsTable.createdAt))
     .limit(5);
 
   const recentFailures = await db
@@ -397,7 +397,7 @@ router.get("/dashboard", async (_req, res) => {
     .leftJoin(campaignsTable, eq(campaignsTable.id, messagesTable.campaignId))
     .leftJoin(contactsTable, eq(contactsTable.id, messagesTable.contactId))
     .where(or(eq(messagesTable.lastStatus, "failed"), eq(messagesTable.lastStatus, "noAccount")))
-    .orderBy(messagesTable.updatedAt)
+    .orderBy(desc(messagesTable.updatedAt))
     .limit(5);
 
   return res.json({
