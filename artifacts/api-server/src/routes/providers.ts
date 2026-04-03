@@ -18,6 +18,44 @@ router.get("/providers", async (_req, res) => {
   return res.json(providers);
 });
 
+router.get("/providers/config", async (req, res) => {
+  const { providerName } = req.query as Record<string, string>;
+
+  if (providerName) {
+    const [config] = await db
+      .select({
+        id: providerConfigsTable.id,
+        providerName: providerConfigsTable.providerName,
+        baseUrl: providerConfigsTable.baseUrl,
+        instanceId: providerConfigsTable.instanceId,
+        isActive: providerConfigsTable.isActive,
+        createdAt: providerConfigsTable.createdAt,
+        updatedAt: providerConfigsTable.updatedAt,
+      })
+      .from(providerConfigsTable)
+      .where(eq(providerConfigsTable.providerName, providerName));
+
+    if (!config) return res.status(404).json({ error: "Provider config not found" });
+    return res.json(config);
+  }
+
+  const [active] = await db
+    .select({
+      id: providerConfigsTable.id,
+      providerName: providerConfigsTable.providerName,
+      baseUrl: providerConfigsTable.baseUrl,
+      instanceId: providerConfigsTable.instanceId,
+      isActive: providerConfigsTable.isActive,
+      createdAt: providerConfigsTable.createdAt,
+      updatedAt: providerConfigsTable.updatedAt,
+    })
+    .from(providerConfigsTable)
+    .where(eq(providerConfigsTable.isActive, "true"));
+
+  if (!active) return res.status(404).json({ error: "No active provider configured" });
+  return res.json(active);
+});
+
 router.post("/providers/config", async (req, res) => {
   const { providerName, baseUrl, instanceId, apiToken, webhookSecret, isActive } = req.body;
   if (!providerName) return res.status(400).json({ error: "providerName is required" });

@@ -41,7 +41,7 @@ export default function Tracking() {
     ...(search ? { search } : {}),
   };
 
-  const { data: messagesData, isLoading } = useGetMessages({ query: { queryKey: getGetMessagesQueryKey(params) } });
+  const { data: messagesData, isLoading } = useGetMessages(params, { query: { queryKey: getGetMessagesQueryKey(params) } });
 
   const messages = Array.isArray(messagesData) ? messagesData : (messagesData as { messages?: unknown[] })?.messages ?? [];
   const total = Array.isArray(messagesData) ? messages.length : (messagesData as { total?: number })?.total ?? messages.length;
@@ -131,7 +131,7 @@ export default function Tracking() {
             <SelectItem value="delivered">Delivered</SelectItem>
             <SelectItem value="read">Read</SelectItem>
             <SelectItem value="failed">Failed</SelectItem>
-            <SelectItem value="no_account">No Account</SelectItem>
+            <SelectItem value="noAccount">No Account</SelectItem>
           </SelectContent>
         </Select>
         <span className="text-sm text-muted-foreground">{total.toLocaleString()} message{total !== 1 ? "s" : ""}</span>

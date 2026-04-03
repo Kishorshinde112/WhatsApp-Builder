@@ -10,6 +10,7 @@ import {
   importRowsTable,
 } from "@workspace/db";
 import { eq, ilike, or, sql, and } from "drizzle-orm";
+import { CreateContactBody, UpdateContactBody } from "@workspace/api-zod";
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
@@ -78,10 +79,11 @@ router.get("/contacts", async (req, res) => {
 });
 
 router.post("/contacts", async (req, res) => {
-  const { name, phone, email, tags, customFields } = req.body;
-  if (!name || !phone) {
-    return res.status(400).json({ error: "name and phone are required" });
+  const parsed = CreateContactBody.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: "Validation failed", issues: parsed.error.issues });
   }
+  const { name, phone, email, tags, customFields } = parsed.data;
   if (!isValidPhone(phone)) {
     return res.status(400).json({ error: "Invalid phone number format" });
   }

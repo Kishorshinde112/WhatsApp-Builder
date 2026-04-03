@@ -14,6 +14,8 @@ import {
   resumeRunner,
   cancelRunner,
 } from "../services/campaign-runner.js";
+import { logger } from "../lib/logger.js";
+import { CreateCampaignBody, UpdateCampaignBody } from "@workspace/api-zod";
 
 const router = Router();
 
@@ -65,10 +67,11 @@ router.get("/campaigns", async (req, res) => {
 });
 
 router.post("/campaigns", async (req, res) => {
-  const { name, template, delaySeconds, provider, listId, dryRun } = req.body;
-  if (!name || !template) {
-    return res.status(400).json({ error: "name and template are required" });
+  const parsed = CreateCampaignBody.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: "Validation failed", issues: parsed.error.issues });
   }
+  const { name, template, delaySeconds, provider, listId, dryRun } = parsed.data;
 
   const [campaign] = await db
     .insert(campaignsTable)
@@ -215,9 +218,17 @@ router.post("/campaigns/:id/validate", async (req, res) => {
   }
 
   const estimatedDurationSeconds = contacts.length * campaign.delaySeconds;
+  const valid = errors.length === 0;
+
+  if (valid && campaign.status === "draft") {
+    await db
+      .update(campaignsTable)
+      .set({ status: "ready", updatedAt: new Date() })
+      .where(eq(campaignsTable.id, id));
+  }
 
   return res.json({
-    valid: errors.length === 0,
+    valid,
     totalContacts: contacts.length,
     invalidPhones,
     duplicateContacts,
@@ -293,7 +304,7 @@ router.post("/campaigns/:id/launch", async (req, res) => {
 
   setImmediate(() => {
     startCampaignRunner(id).catch((err) => {
-      console.error("Campaign runner error:", err);
+      logger.error({ err }, "Campaign runner error");
     });
   });
 

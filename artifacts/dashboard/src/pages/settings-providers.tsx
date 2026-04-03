@@ -81,7 +81,7 @@ export default function SettingsProviders() {
       const result = await testProvider.mutateAsync({
         data: { providerName, baseUrl: baseUrl || undefined, instanceId: instanceId || undefined, apiToken: apiToken || undefined },
       });
-      setTestResult({ success: true, message: (result as Record<string, unknown>).message as string ?? "Connection successful" });
+      setTestResult({ success: true, message: result.message ?? "Connection successful" });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Connection failed";
       setTestResult({ success: false, message: msg });

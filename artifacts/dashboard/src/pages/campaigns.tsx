@@ -48,8 +48,8 @@ export default function Campaigns() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const params = status !== "all" ? { status } : {};
-  const { data: campaigns, isLoading } = useGetCampaigns({ query: { queryKey: getGetCampaignsQueryKey(params) } });
+  const params = status !== "all" ? { status } : undefined;
+  const { data: campaigns, isLoading } = useGetCampaigns(params, { query: { queryKey: getGetCampaignsQueryKey(params) } });
 
   const launch = useLaunchCampaign();
   const pause = usePauseCampaign();

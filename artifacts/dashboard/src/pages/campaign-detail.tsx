@@ -218,7 +218,7 @@ export default function CampaignDetail() {
               <SelectItem value="delivered">Delivered</SelectItem>
               <SelectItem value="read">Read</SelectItem>
               <SelectItem value="failed">Failed</SelectItem>
-              <SelectItem value="no_account">No Account</SelectItem>
+              <SelectItem value="noAccount">No Account</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -251,11 +251,11 @@ export default function CampaignDetail() {
                   <TableRow key={c.id} data-testid={`report-row-${c.id}`}>
                     <TableCell className="font-medium">{c.contactName ?? "-"}</TableCell>
                     <TableCell className="font-mono text-sm text-muted-foreground">{c.contactPhone}</TableCell>
-                    <TableCell><StatusBadge status={c.messageStatus ?? "queued"} /></TableCell>
+                    <TableCell><StatusBadge status={c.status ?? "queued"} /></TableCell>
                     <TableCell>
-                      {c.messageId ? (
-                        <Link href={`/tracking/messages/${c.messageId}`}>
-                          <span className="text-xs text-primary hover:underline cursor-pointer">View message</span>
+                      {c.sentAt ? (
+                        <Link href={`/tracking?search=${encodeURIComponent(c.contactPhone)}`}>
+                          <span className="text-xs text-primary hover:underline cursor-pointer">View in tracking</span>
                         </Link>
                       ) : (
                         <span className="text-xs text-muted-foreground">Not sent yet</span>

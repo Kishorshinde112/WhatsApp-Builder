@@ -19,7 +19,7 @@ const statusIcons: Record<string, React.ReactNode> = {
   delivered: <Package className="h-4 w-4 text-teal-500" />,
   read: <CheckCircle className="h-4 w-4 text-green-500" />,
   failed: <AlertCircle className="h-4 w-4 text-red-500" />,
-  no_account: <AlertCircle className="h-4 w-4 text-orange-500" />,
+  noAccount: <AlertCircle className="h-4 w-4 text-orange-500" />,
 };
 
 const statusHelp: Record<string, string> = {
@@ -28,7 +28,7 @@ const statusHelp: Record<string, string> = {
   delivered: "Message was delivered to the recipient's device.",
   read: "Message was read by the recipient.",
   failed: "Message failed to send. You can retry if the error is transient.",
-  no_account: "The recipient does not have a WhatsApp account on this number.",
+  noAccount: "The recipient does not have a WhatsApp account on this number.",
 };
 
 export default function MessageDetail() {
@@ -63,12 +63,7 @@ export default function MessageDetail() {
     );
   }
 
-  const events = (message as Record<string, unknown>).events as Array<{
-    id: number;
-    status: string;
-    description?: string;
-    createdAt: string;
-  }> ?? [];
+  const events = message.events ?? [];
 
   return (
     <div className="space-y-6 max-w-2xl" data-testid="message-detail-page">
@@ -95,17 +90,17 @@ export default function MessageDetail() {
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div>
               <p className="text-xs text-muted-foreground">Contact</p>
-              <p className="font-medium">{(message as Record<string, unknown>).contactName as string ?? "—"}</p>
+              <p className="font-medium">{message.contactName ?? "—"}</p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Phone</p>
-              <p className="font-medium font-mono">{(message as Record<string, unknown>).contactPhone as string ?? message.provider}</p>
+              <p className="font-medium font-mono">{message.contactPhone ?? message.provider}</p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Campaign</p>
               <Link href={`/campaigns/${message.campaignId}`}>
                 <span className="font-medium text-primary hover:underline cursor-pointer">
-                  {(message as Record<string, unknown>).campaignName as string ?? `Campaign #${message.campaignId}`}
+                  {message.campaignName ?? `Campaign #${message.campaignId}`}
                 </span>
               </Link>
             </div>

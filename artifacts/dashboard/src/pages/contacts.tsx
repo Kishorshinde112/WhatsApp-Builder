@@ -83,7 +83,7 @@ export default function Contacts() {
     ...(validationStatus !== "all" ? { validationStatus } : {}),
   };
 
-  const { data: contacts, isLoading } = useGetContacts({ query: { queryKey: getGetContactsQueryKey(params) } });
+  const { data: contacts, isLoading } = useGetContacts(params, { query: { queryKey: getGetContactsQueryKey(params) } });
 
   const createContact = useCreateContact();
   const updateContact = useUpdateContact();
@@ -225,7 +225,7 @@ export default function Contacts() {
                   <TableCell className="text-sm text-muted-foreground">{contact.email ?? "—"}</TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
-                      {(contact.tags ?? []).map((tag) => (
+                      {(contact.tags ?? []).map((tag: string) => (
                         <span key={tag} className="px-1.5 py-0.5 text-xs rounded bg-muted text-muted-foreground">{tag}</span>
                       ))}
                     </div>

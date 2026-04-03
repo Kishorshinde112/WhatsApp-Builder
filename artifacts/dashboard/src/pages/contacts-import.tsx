@@ -23,9 +23,10 @@ type PreviewData = {
 };
 
 type ImportResult = {
-  imported: number;
-  skipped: number;
-  errors: string[];
+  importedRows: number;
+  duplicateRows: number;
+  invalidRows: number;
+  errors: Array<{ row: number; error: string }>;
 };
 
 export default function ContactsImport() {
@@ -102,7 +103,12 @@ export default function ContactsImport() {
       });
       if (!res.ok) throw new Error("Import failed");
       const data = await res.json();
-      setResult({ imported: data.imported ?? 0, skipped: data.skipped ?? 0, errors: data.errors ?? [] });
+      setResult({
+        importedRows: data.importedRows ?? 0,
+        duplicateRows: data.duplicateRows ?? 0,
+        invalidRows: data.invalidRows ?? 0,
+        errors: data.errors ?? [],
+      });
       setStep("result");
     } catch {
       toast({ title: "Import failed", variant: "destructive" });
@@ -264,16 +270,16 @@ export default function ContactsImport() {
             </div>
             <div className="grid grid-cols-3 gap-3">
               <div className="rounded-md bg-muted p-3 text-center">
-                <p className="text-2xl font-bold text-green-600">{result.imported}</p>
+                <p className="text-2xl font-bold text-green-600">{result.importedRows}</p>
                 <p className="text-xs text-muted-foreground">Imported</p>
               </div>
               <div className="rounded-md bg-muted p-3 text-center">
-                <p className="text-2xl font-bold text-muted-foreground">{result.skipped}</p>
+                <p className="text-2xl font-bold text-muted-foreground">{result.duplicateRows}</p>
                 <p className="text-xs text-muted-foreground">Skipped (duplicates)</p>
               </div>
               <div className="rounded-md bg-muted p-3 text-center">
-                <p className="text-2xl font-bold text-red-500">{result.errors.length}</p>
-                <p className="text-xs text-muted-foreground">Errors</p>
+                <p className="text-2xl font-bold text-red-500">{result.invalidRows}</p>
+                <p className="text-xs text-muted-foreground">Invalid</p>
               </div>
             </div>
             {result.errors.length > 0 && (
@@ -284,7 +290,7 @@ export default function ContactsImport() {
                 </div>
                 <div className="rounded-md bg-destructive/10 p-3 space-y-1 max-h-32 overflow-y-auto">
                   {result.errors.slice(0, 10).map((e, i) => (
-                    <p key={i} className="text-xs text-destructive">{e}</p>
+                    <p key={i} className="text-xs text-destructive">Row {e.row}: {e.error}</p>
                   ))}
                 </div>
               </div>
