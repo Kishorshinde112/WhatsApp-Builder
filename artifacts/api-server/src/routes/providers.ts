@@ -9,7 +9,7 @@ import {
 } from "@workspace/db";
 import { eq, and, sql } from "drizzle-orm";
 import { logger } from "../lib/logger.js";
-import { mockProvider } from "../services/provider/index.js";
+import { getProvider } from "../services/provider/index.js";
 
 const router = Router();
 
@@ -139,7 +139,8 @@ router.post("/webhooks/:provider", async (req, res) => {
   req.log.info({ provider, body: req.body }, "Webhook received");
 
   try {
-    const statusEvent = await mockProvider.handleWebhook(req.body as Record<string, unknown>);
+    const providerInstance = getProvider(provider);
+    const statusEvent = await providerInstance.handleWebhook(req.body as Record<string, unknown>);
 
     if (!statusEvent || !statusEvent.externalMessageId) {
       return res.json({ success: true, message: "Webhook acknowledged (no actionable event)" });

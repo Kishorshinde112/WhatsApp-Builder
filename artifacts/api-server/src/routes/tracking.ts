@@ -8,7 +8,7 @@ import {
   campaignContactsTable,
 } from "@workspace/db";
 import { eq, and, ilike, or, sql, desc } from "drizzle-orm";
-import { mockProvider } from "../services/provider/index.js";
+import { getProvider } from "../services/provider/index.js";
 
 const router = Router();
 
@@ -194,7 +194,8 @@ router.post("/tracking/messages/:id/retry", async (req, res) => {
 
   const message = cc[0]?.renderedMessage ?? "Retried message";
 
-  const result = await mockProvider.sendMessage({
+  const provider = getProvider(msg.provider ?? "mock");
+  const result = await provider.sendMessage({
     contactId: msg.contactId,
     phone: contact.phone,
     message,

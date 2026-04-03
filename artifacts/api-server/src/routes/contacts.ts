@@ -270,7 +270,7 @@ router.post("/contacts/import", upload.single("file"), async (req, res) => {
       .from(contactsTable)
       .where(eq(contactsTable.normalizedPhone, normalizedPhone));
 
-    if (existing.length > 0 && skipDuplicates) {
+    if (existing.length > 0) {
       duplicateRows++;
       await db.insert(importRowsTable).values({
         importId: importRecord.id,
@@ -278,8 +278,11 @@ router.post("/contacts/import", upload.single("file"), async (req, res) => {
         rawData: raw as Record<string, unknown>,
         mappedData: mapped as Record<string, unknown>,
         status: "duplicate",
-        errorMessage: "Duplicate phone number",
+        errorMessage: "Duplicate phone number — contact already exists",
       });
+      if (!skipDuplicates) {
+        errors.push({ row: i + 1, error: `Duplicate phone: ${phone}` });
+      }
       continue;
     }
 

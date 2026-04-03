@@ -7,7 +7,7 @@ import {
   contactsTable,
 } from "@workspace/db";
 import { eq, and, inArray } from "drizzle-orm";
-import { mockProvider } from "./provider/index.js";
+import { mockProvider, getProvider } from "./provider/index.js";
 import { logger } from "../lib/logger.js";
 import type { StatusUpdateEvent } from "./provider/types.js";
 
@@ -213,7 +213,8 @@ export async function startCampaignRunner(campaignId: number) {
           .set({ status: "sent", sentAt: new Date(), updatedAt: new Date() })
           .where(eq(campaignContactsTable.id, cc.ccId));
       } else {
-        const result = await mockProvider.sendMessage({
+        const provider = getProvider(campaign.provider);
+        const result = await provider.sendMessage({
           contactId: cc.contactId,
           phone: contact.phone,
           message: cc.renderedMessage,
