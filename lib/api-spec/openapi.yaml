@@ -10,6 +10,14 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: contacts
+    description: Contact management
+  - name: campaigns
+    description: Campaign management
+  - name: tracking
+    description: Message tracking
+  - name: providers
+    description: Provider configuration
 paths:
   /healthz:
     get:
@@ -24,6 +32,721 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /contacts:
+    get:
+      operationId: getContacts
+      tags: [contacts]
+      summary: List contacts
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: listId
+          in: query
+          schema:
+            type: ["integer", "null"]
+        - name: validationStatus
+          in: query
+          schema:
+            type: ["string", "null"]
+      responses:
+        "200":
+          description: Contacts list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContactsListResponse"
+    post:
+      operationId: createContact
+      tags: [contacts]
+      summary: Create contact
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateContactBody"
+      responses:
+        "201":
+          description: Contact created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Contact"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /contacts/{id}:
+    get:
+      operationId: getContact
+      tags: [contacts]
+      summary: Get contact by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Contact
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Contact"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: updateContact
+      tags: [contacts]
+      summary: Update contact
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateContactBody"
+      responses:
+        "200":
+          description: Updated contact
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Contact"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteContact
+      tags: [contacts]
+      summary: Delete contact
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /contacts/import/preview:
+    post:
+      operationId: previewContactImport
+      tags: [contacts]
+      summary: Preview CSV import
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: Import preview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportPreviewResponse"
+
+  /contacts/import:
+    post:
+      operationId: importContacts
+      tags: [contacts]
+      summary: Import contacts from CSV
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                columnMapping:
+                  type: string
+                listId:
+                  type: string
+                skipDuplicates:
+                  type: string
+      responses:
+        "200":
+          description: Import result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportResultResponse"
+
+  /contact-lists:
+    get:
+      operationId: getContactLists
+      tags: [contacts]
+      summary: List contact lists
+      responses:
+        "200":
+          description: Contact lists
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ContactList"
+    post:
+      operationId: createContactList
+      tags: [contacts]
+      summary: Create contact list
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateContactListBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContactList"
+
+  /contact-lists/{id}:
+    get:
+      operationId: getContactList
+      tags: [contacts]
+      summary: Get contact list by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Contact list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContactList"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteContactList
+      tags: [contacts]
+      summary: Delete contact list
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /campaigns:
+    get:
+      operationId: getCampaigns
+      tags: [campaigns]
+      summary: List campaigns
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: ["string", "null"]
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: Campaigns list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CampaignsListResponse"
+    post:
+      operationId: createCampaign
+      tags: [campaigns]
+      summary: Create campaign
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCampaignBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Campaign"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /campaigns/{id}:
+    get:
+      operationId: getCampaign
+      tags: [campaigns]
+      summary: Get campaign by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Campaign
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CampaignDetail"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: updateCampaign
+      tags: [campaigns]
+      summary: Update campaign
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCampaignBody"
+      responses:
+        "200":
+          description: Updated campaign
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Campaign"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /campaigns/{id}/validate:
+    post:
+      operationId: validateCampaign
+      tags: [campaigns]
+      summary: Validate campaign before launch
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Validation result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CampaignValidationResult"
+
+  /campaigns/{id}/launch:
+    post:
+      operationId: launchCampaign
+      tags: [campaigns]
+      summary: Launch campaign
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Campaign launched
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Campaign"
+        "400":
+          description: Cannot launch
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /campaigns/{id}/pause:
+    post:
+      operationId: pauseCampaign
+      tags: [campaigns]
+      summary: Pause campaign
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Campaign paused
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Campaign"
+
+  /campaigns/{id}/resume:
+    post:
+      operationId: resumeCampaign
+      tags: [campaigns]
+      summary: Resume campaign
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Campaign resumed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Campaign"
+
+  /campaigns/{id}/cancel:
+    post:
+      operationId: cancelCampaign
+      tags: [campaigns]
+      summary: Cancel campaign
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Campaign cancelled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Campaign"
+
+  /campaigns/{id}/report:
+    get:
+      operationId: getCampaignReport
+      tags: [campaigns]
+      summary: Get campaign detailed report
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: status
+          in: query
+          schema:
+            type: ["string", "null"]
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        "200":
+          description: Campaign report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CampaignReport"
+
+  /tracking/overview:
+    get:
+      operationId: getTrackingOverview
+      tags: [tracking]
+      summary: Get tracking overview stats
+      responses:
+        "200":
+          description: Overview stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TrackingOverview"
+
+  /tracking/messages:
+    get:
+      operationId: getMessages
+      tags: [tracking]
+      summary: List messages
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: ["string", "null"]
+        - name: campaignId
+          in: query
+          schema:
+            type: ["integer", "null"]
+        - name: search
+          in: query
+          schema:
+            type: ["string", "null"]
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        "200":
+          description: Messages list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessagesListResponse"
+
+  /tracking/messages/{id}:
+    get:
+      operationId: getMessage
+      tags: [tracking]
+      summary: Get message by ID with event timeline
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Message detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageDetail"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /tracking/messages/{id}/retry:
+    post:
+      operationId: retryMessage
+      tags: [tracking]
+      summary: Retry failed message
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Message queued for retry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageDetail"
+        "400":
+          description: Cannot retry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /tracking/export:
+    get:
+      operationId: exportMessages
+      tags: [tracking]
+      summary: Export messages as CSV
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: ["string", "null"]
+        - name: campaignId
+          in: query
+          schema:
+            type: ["integer", "null"]
+      responses:
+        "200":
+          description: CSV export
+          content:
+            text/csv:
+              schema:
+                type: string
+
+  /dashboard:
+    get:
+      operationId: getDashboard
+      tags: [tracking]
+      summary: Get dashboard overview
+      responses:
+        "200":
+          description: Dashboard data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardData"
+
+  /providers:
+    get:
+      operationId: getProviders
+      tags: [providers]
+      summary: List provider configurations
+      responses:
+        "200":
+          description: Providers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProviderConfig"
+
+  /providers/config:
+    post:
+      operationId: saveProviderConfig
+      tags: [providers]
+      summary: Save provider configuration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaveProviderConfigBody"
+      responses:
+        "200":
+          description: Saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProviderConfig"
+
+  /providers/test:
+    post:
+      operationId: testProvider
+      tags: [providers]
+      summary: Test provider connection
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TestProviderBody"
+      responses:
+        "200":
+          description: Test result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProviderTestResult"
+
+  /webhooks/{provider}:
+    post:
+      operationId: handleWebhook
+      tags: [providers]
+      summary: Handle provider webhook
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Webhook processed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +757,645 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+      required:
+        - success
+
+    Contact:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        phone:
+          type: string
+        normalizedPhone:
+          type: string
+        email:
+          type: ["string", "null"]
+        tags:
+          type: array
+          items:
+            type: string
+        customFields:
+          type: object
+          additionalProperties: true
+        validationStatus:
+          type: string
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - name
+        - phone
+        - normalizedPhone
+        - tags
+        - customFields
+        - validationStatus
+        - createdAt
+        - updatedAt
+
+    ContactsListResponse:
+      type: object
+      properties:
+        contacts:
+          type: array
+          items:
+            $ref: "#/components/schemas/Contact"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+      required:
+        - contacts
+        - total
+        - page
+        - limit
+
+    CreateContactBody:
+      type: object
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+        email:
+          type: ["string", "null"]
+        tags:
+          type: array
+          items:
+            type: string
+        customFields:
+          type: object
+          additionalProperties: true
+      required:
+        - name
+        - phone
+
+    UpdateContactBody:
+      type: object
+      properties:
+        name:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        tags:
+          type: ["array", "null"]
+          items:
+            type: string
+        customFields:
+          type: ["object", "null"]
+          additionalProperties: true
+        validationStatus:
+          type: ["string", "null"]
+
+    ContactList:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        contactCount:
+          type: integer
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - name
+        - contactCount
+        - createdAt
+        - updatedAt
+
+    CreateContactListBody:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+      required:
+        - name
+
+    ImportPreviewResponse:
+      type: object
+      properties:
+        headers:
+          type: array
+          items:
+            type: string
+        rows:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        totalRows:
+          type: integer
+        filename:
+          type: string
+      required:
+        - headers
+        - rows
+        - totalRows
+        - filename
+
+    ImportResultResponse:
+      type: object
+      properties:
+        importId:
+          type: integer
+        totalRows:
+          type: integer
+        importedRows:
+          type: integer
+        duplicateRows:
+          type: integer
+        invalidRows:
+          type: integer
+        errors:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+      required:
+        - importId
+        - totalRows
+        - importedRows
+        - duplicateRows
+        - invalidRows
+        - errors
+
+    Campaign:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        template:
+          type: string
+        status:
+          type: string
+        delaySeconds:
+          type: integer
+        provider:
+          type: string
+        listId:
+          type: ["integer", "null"]
+        totalContacts:
+          type: integer
+        queuedCount:
+          type: integer
+        sentCount:
+          type: integer
+        deliveredCount:
+          type: integer
+        readCount:
+          type: integer
+        failedCount:
+          type: integer
+        noAccountCount:
+          type: integer
+        dryRun:
+          type: string
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+        startedAt:
+          type: ["string", "null"]
+        finishedAt:
+          type: ["string", "null"]
+      required:
+        - id
+        - name
+        - template
+        - status
+        - delaySeconds
+        - provider
+        - totalContacts
+        - queuedCount
+        - sentCount
+        - deliveredCount
+        - readCount
+        - failedCount
+        - noAccountCount
+        - dryRun
+        - createdAt
+        - updatedAt
+
+    CampaignDetail:
+      allOf:
+        - $ref: "#/components/schemas/Campaign"
+        - type: object
+          properties:
+            listName:
+              type: ["string", "null"]
+
+    CampaignsListResponse:
+      type: object
+      properties:
+        campaigns:
+          type: array
+          items:
+            $ref: "#/components/schemas/Campaign"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+      required:
+        - campaigns
+        - total
+        - page
+        - limit
+
+    CreateCampaignBody:
+      type: object
+      properties:
+        name:
+          type: string
+        template:
+          type: string
+        delaySeconds:
+          type: integer
+        provider:
+          type: string
+        listId:
+          type: ["integer", "null"]
+        dryRun:
+          type: string
+      required:
+        - name
+        - template
+
+    UpdateCampaignBody:
+      type: object
+      properties:
+        name:
+          type: ["string", "null"]
+        template:
+          type: ["string", "null"]
+        delaySeconds:
+          type: ["integer", "null"]
+        provider:
+          type: ["string", "null"]
+        listId:
+          type: ["integer", "null"]
+        dryRun:
+          type: ["string", "null"]
+
+    CampaignValidationResult:
+      type: object
+      properties:
+        valid:
+          type: boolean
+        totalContacts:
+          type: integer
+        invalidPhones:
+          type: integer
+        duplicateContacts:
+          type: integer
+        missingVariables:
+          type: array
+          items:
+            type: string
+        emptyTemplateVars:
+          type: array
+          items:
+            type: string
+        estimatedDurationSeconds:
+          type: integer
+        errors:
+          type: array
+          items:
+            type: string
+        warnings:
+          type: array
+          items:
+            type: string
+      required:
+        - valid
+        - totalContacts
+        - invalidPhones
+        - duplicateContacts
+        - missingVariables
+        - emptyTemplateVars
+        - estimatedDurationSeconds
+        - errors
+        - warnings
+
+    CampaignContactRow:
+      type: object
+      properties:
+        id:
+          type: integer
+        contactId:
+          type: integer
+        contactName:
+          type: string
+        contactPhone:
+          type: string
+        renderedMessage:
+          type: string
+        status:
+          type: string
+        validationError:
+          type: ["string", "null"]
+        queuedAt:
+          type: ["string", "null"]
+        sentAt:
+          type: ["string", "null"]
+        deliveredAt:
+          type: ["string", "null"]
+        readAt:
+          type: ["string", "null"]
+        failedAt:
+          type: ["string", "null"]
+      required:
+        - id
+        - contactId
+        - contactName
+        - contactPhone
+        - renderedMessage
+        - status
+
+    CampaignReport:
+      type: object
+      properties:
+        campaign:
+          $ref: "#/components/schemas/CampaignDetail"
+        contacts:
+          type: array
+          items:
+            $ref: "#/components/schemas/CampaignContactRow"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+      required:
+        - campaign
+        - contacts
+        - total
+        - page
+        - limit
+
+    Message:
+      type: object
+      properties:
+        id:
+          type: integer
+        campaignId:
+          type: integer
+        campaignName:
+          type: string
+        contactId:
+          type: integer
+        contactName:
+          type: string
+        contactPhone:
+          type: string
+        externalMessageId:
+          type: ["string", "null"]
+        provider:
+          type: string
+        lastStatus:
+          type: string
+        errorMessage:
+          type: ["string", "null"]
+        retryCount:
+          type: integer
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - campaignId
+        - campaignName
+        - contactId
+        - contactName
+        - contactPhone
+        - provider
+        - lastStatus
+        - retryCount
+        - createdAt
+        - updatedAt
+
+    MessageEvent:
+      type: object
+      properties:
+        id:
+          type: integer
+        messageId:
+          type: integer
+        status:
+          type: string
+        description:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - messageId
+        - status
+        - createdAt
+
+    MessageDetail:
+      allOf:
+        - $ref: "#/components/schemas/Message"
+        - type: object
+          properties:
+            events:
+              type: array
+              items:
+                $ref: "#/components/schemas/MessageEvent"
+            requestPayload:
+              type: object
+              additionalProperties: true
+            responsePayload:
+              type: object
+              additionalProperties: true
+          required:
+            - events
+
+    MessagesListResponse:
+      type: object
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/Message"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+      required:
+        - messages
+        - total
+        - page
+        - limit
+
+    TrackingOverview:
+      type: object
+      properties:
+        totalMessages:
+          type: integer
+        queued:
+          type: integer
+        sent:
+          type: integer
+        delivered:
+          type: integer
+        read:
+          type: integer
+        failed:
+          type: integer
+        noAccount:
+          type: integer
+        deliveryRate:
+          type: number
+        readRate:
+          type: number
+        failureRate:
+          type: number
+      required:
+        - totalMessages
+        - queued
+        - sent
+        - delivered
+        - read
+        - failed
+        - noAccount
+        - deliveryRate
+        - readRate
+        - failureRate
+
+    DashboardData:
+      type: object
+      properties:
+        totalCampaigns:
+          type: integer
+        activeCampaigns:
+          type: integer
+        totalContacts:
+          type: integer
+        totalMessages:
+          type: integer
+        messageSummary:
+          $ref: "#/components/schemas/TrackingOverview"
+        recentCampaigns:
+          type: array
+          items:
+            $ref: "#/components/schemas/Campaign"
+        recentFailures:
+          type: array
+          items:
+            $ref: "#/components/schemas/Message"
+      required:
+        - totalCampaigns
+        - activeCampaigns
+        - totalContacts
+        - totalMessages
+        - messageSummary
+        - recentCampaigns
+        - recentFailures
+
+    ProviderConfig:
+      type: object
+      properties:
+        id:
+          type: integer
+        providerName:
+          type: string
+        baseUrl:
+          type: ["string", "null"]
+        instanceId:
+          type: ["string", "null"]
+        isActive:
+          type: string
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - providerName
+        - isActive
+        - createdAt
+        - updatedAt
+
+    SaveProviderConfigBody:
+      type: object
+      properties:
+        providerName:
+          type: string
+        baseUrl:
+          type: ["string", "null"]
+        instanceId:
+          type: ["string", "null"]
+        apiToken:
+          type: ["string", "null"]
+        webhookSecret:
+          type: ["string", "null"]
+        isActive:
+          type: string
+      required:
+        - providerName
+
+    TestProviderBody:
+      type: object
+      properties:
+        providerName:
+          type: string
+        baseUrl:
+          type: ["string", "null"]
+        instanceId:
+          type: ["string", "null"]
+        apiToken:
+          type: ["string", "null"]
+      required:
+        - providerName
+
+    ProviderTestResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        latencyMs:
+          type: ["integer", "null"]
+      required:
+        - success
+        - message

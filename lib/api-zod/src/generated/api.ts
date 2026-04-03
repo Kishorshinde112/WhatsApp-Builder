@@ -14,3 +14,784 @@ import * as zod from "zod";
 export const HealthCheckResponse = zod.object({
   status: zod.string(),
 });
+
+/**
+ * @summary List contacts
+ */
+export const getContactsQueryPageDefault = 1;
+export const getContactsQueryLimitDefault = 50;
+
+export const GetContactsQueryParams = zod.object({
+  search: zod.coerce.string().optional(),
+  page: zod.coerce.number().default(getContactsQueryPageDefault),
+  limit: zod.coerce.number().default(getContactsQueryLimitDefault),
+  listId: zod.coerce.number().nullish(),
+  validationStatus: zod.coerce.string().nullish(),
+});
+
+export const GetContactsResponse = zod.object({
+  contacts: zod.array(
+    zod.object({
+      id: zod.number(),
+      name: zod.string(),
+      phone: zod.string(),
+      normalizedPhone: zod.string(),
+      email: zod.string().nullish(),
+      tags: zod.array(zod.string()),
+      customFields: zod.record(zod.string(), zod.unknown()),
+      validationStatus: zod.string(),
+      createdAt: zod.string(),
+      updatedAt: zod.string(),
+    }),
+  ),
+  total: zod.number(),
+  page: zod.number(),
+  limit: zod.number(),
+});
+
+/**
+ * @summary Create contact
+ */
+export const CreateContactBody = zod.object({
+  name: zod.string(),
+  phone: zod.string(),
+  email: zod.string().nullish(),
+  tags: zod.array(zod.string()).optional(),
+  customFields: zod.record(zod.string(), zod.unknown()).optional(),
+});
+
+/**
+ * @summary Get contact by ID
+ */
+export const GetContactParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const GetContactResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  phone: zod.string(),
+  normalizedPhone: zod.string(),
+  email: zod.string().nullish(),
+  tags: zod.array(zod.string()),
+  customFields: zod.record(zod.string(), zod.unknown()),
+  validationStatus: zod.string(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+
+/**
+ * @summary Update contact
+ */
+export const UpdateContactParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UpdateContactBody = zod.object({
+  name: zod.string().nullish(),
+  phone: zod.string().nullish(),
+  email: zod.string().nullish(),
+  tags: zod.array(zod.string()).nullish(),
+  customFields: zod.record(zod.string(), zod.unknown()).nullish(),
+  validationStatus: zod.string().nullish(),
+});
+
+export const UpdateContactResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  phone: zod.string(),
+  normalizedPhone: zod.string(),
+  email: zod.string().nullish(),
+  tags: zod.array(zod.string()),
+  customFields: zod.record(zod.string(), zod.unknown()),
+  validationStatus: zod.string(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+
+/**
+ * @summary Delete contact
+ */
+export const DeleteContactParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const DeleteContactResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string().optional(),
+});
+
+/**
+ * @summary Preview CSV import
+ */
+export const PreviewContactImportBody = zod.object({
+  file: zod.instanceof(File).optional(),
+});
+
+export const PreviewContactImportResponse = zod.object({
+  headers: zod.array(zod.string()),
+  rows: zod.array(zod.record(zod.string(), zod.unknown())),
+  totalRows: zod.number(),
+  filename: zod.string(),
+});
+
+/**
+ * @summary Import contacts from CSV
+ */
+export const ImportContactsBody = zod.object({
+  file: zod.instanceof(File).optional(),
+  columnMapping: zod.string().optional(),
+  listId: zod.string().optional(),
+  skipDuplicates: zod.string().optional(),
+});
+
+export const ImportContactsResponse = zod.object({
+  importId: zod.number(),
+  totalRows: zod.number(),
+  importedRows: zod.number(),
+  duplicateRows: zod.number(),
+  invalidRows: zod.number(),
+  errors: zod.array(zod.record(zod.string(), zod.unknown())),
+});
+
+/**
+ * @summary List contact lists
+ */
+export const GetContactListsResponseItem = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  description: zod.string().nullish(),
+  contactCount: zod.number(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+export const GetContactListsResponse = zod.array(GetContactListsResponseItem);
+
+/**
+ * @summary Create contact list
+ */
+export const CreateContactListBody = zod.object({
+  name: zod.string(),
+  description: zod.string().nullish(),
+});
+
+/**
+ * @summary Get contact list by ID
+ */
+export const GetContactListParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const GetContactListResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  description: zod.string().nullish(),
+  contactCount: zod.number(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+
+/**
+ * @summary Delete contact list
+ */
+export const DeleteContactListParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const DeleteContactListResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string().optional(),
+});
+
+/**
+ * @summary List campaigns
+ */
+export const getCampaignsQueryPageDefault = 1;
+export const getCampaignsQueryLimitDefault = 20;
+
+export const GetCampaignsQueryParams = zod.object({
+  status: zod.coerce.string().nullish(),
+  page: zod.coerce.number().default(getCampaignsQueryPageDefault),
+  limit: zod.coerce.number().default(getCampaignsQueryLimitDefault),
+});
+
+export const GetCampaignsResponse = zod.object({
+  campaigns: zod.array(
+    zod.object({
+      id: zod.number(),
+      name: zod.string(),
+      template: zod.string(),
+      status: zod.string(),
+      delaySeconds: zod.number(),
+      provider: zod.string(),
+      listId: zod.number().nullish(),
+      totalContacts: zod.number(),
+      queuedCount: zod.number(),
+      sentCount: zod.number(),
+      deliveredCount: zod.number(),
+      readCount: zod.number(),
+      failedCount: zod.number(),
+      noAccountCount: zod.number(),
+      dryRun: zod.string(),
+      createdAt: zod.string(),
+      updatedAt: zod.string(),
+      startedAt: zod.string().nullish(),
+      finishedAt: zod.string().nullish(),
+    }),
+  ),
+  total: zod.number(),
+  page: zod.number(),
+  limit: zod.number(),
+});
+
+/**
+ * @summary Create campaign
+ */
+export const CreateCampaignBody = zod.object({
+  name: zod.string(),
+  template: zod.string(),
+  delaySeconds: zod.number().optional(),
+  provider: zod.string().optional(),
+  listId: zod.number().nullish(),
+  dryRun: zod.string().optional(),
+});
+
+/**
+ * @summary Get campaign by ID
+ */
+export const GetCampaignParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const GetCampaignResponse = zod
+  .object({
+    id: zod.number(),
+    name: zod.string(),
+    template: zod.string(),
+    status: zod.string(),
+    delaySeconds: zod.number(),
+    provider: zod.string(),
+    listId: zod.number().nullish(),
+    totalContacts: zod.number(),
+    queuedCount: zod.number(),
+    sentCount: zod.number(),
+    deliveredCount: zod.number(),
+    readCount: zod.number(),
+    failedCount: zod.number(),
+    noAccountCount: zod.number(),
+    dryRun: zod.string(),
+    createdAt: zod.string(),
+    updatedAt: zod.string(),
+    startedAt: zod.string().nullish(),
+    finishedAt: zod.string().nullish(),
+  })
+  .and(
+    zod.object({
+      listName: zod.string().nullish(),
+    }),
+  );
+
+/**
+ * @summary Update campaign
+ */
+export const UpdateCampaignParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UpdateCampaignBody = zod.object({
+  name: zod.string().nullish(),
+  template: zod.string().nullish(),
+  delaySeconds: zod.number().nullish(),
+  provider: zod.string().nullish(),
+  listId: zod.number().nullish(),
+  dryRun: zod.string().nullish(),
+});
+
+export const UpdateCampaignResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  template: zod.string(),
+  status: zod.string(),
+  delaySeconds: zod.number(),
+  provider: zod.string(),
+  listId: zod.number().nullish(),
+  totalContacts: zod.number(),
+  queuedCount: zod.number(),
+  sentCount: zod.number(),
+  deliveredCount: zod.number(),
+  readCount: zod.number(),
+  failedCount: zod.number(),
+  noAccountCount: zod.number(),
+  dryRun: zod.string(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+  startedAt: zod.string().nullish(),
+  finishedAt: zod.string().nullish(),
+});
+
+/**
+ * @summary Validate campaign before launch
+ */
+export const ValidateCampaignParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const ValidateCampaignResponse = zod.object({
+  valid: zod.boolean(),
+  totalContacts: zod.number(),
+  invalidPhones: zod.number(),
+  duplicateContacts: zod.number(),
+  missingVariables: zod.array(zod.string()),
+  emptyTemplateVars: zod.array(zod.string()),
+  estimatedDurationSeconds: zod.number(),
+  errors: zod.array(zod.string()),
+  warnings: zod.array(zod.string()),
+});
+
+/**
+ * @summary Launch campaign
+ */
+export const LaunchCampaignParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const LaunchCampaignResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  template: zod.string(),
+  status: zod.string(),
+  delaySeconds: zod.number(),
+  provider: zod.string(),
+  listId: zod.number().nullish(),
+  totalContacts: zod.number(),
+  queuedCount: zod.number(),
+  sentCount: zod.number(),
+  deliveredCount: zod.number(),
+  readCount: zod.number(),
+  failedCount: zod.number(),
+  noAccountCount: zod.number(),
+  dryRun: zod.string(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+  startedAt: zod.string().nullish(),
+  finishedAt: zod.string().nullish(),
+});
+
+/**
+ * @summary Pause campaign
+ */
+export const PauseCampaignParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const PauseCampaignResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  template: zod.string(),
+  status: zod.string(),
+  delaySeconds: zod.number(),
+  provider: zod.string(),
+  listId: zod.number().nullish(),
+  totalContacts: zod.number(),
+  queuedCount: zod.number(),
+  sentCount: zod.number(),
+  deliveredCount: zod.number(),
+  readCount: zod.number(),
+  failedCount: zod.number(),
+  noAccountCount: zod.number(),
+  dryRun: zod.string(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+  startedAt: zod.string().nullish(),
+  finishedAt: zod.string().nullish(),
+});
+
+/**
+ * @summary Resume campaign
+ */
+export const ResumeCampaignParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const ResumeCampaignResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  template: zod.string(),
+  status: zod.string(),
+  delaySeconds: zod.number(),
+  provider: zod.string(),
+  listId: zod.number().nullish(),
+  totalContacts: zod.number(),
+  queuedCount: zod.number(),
+  sentCount: zod.number(),
+  deliveredCount: zod.number(),
+  readCount: zod.number(),
+  failedCount: zod.number(),
+  noAccountCount: zod.number(),
+  dryRun: zod.string(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+  startedAt: zod.string().nullish(),
+  finishedAt: zod.string().nullish(),
+});
+
+/**
+ * @summary Cancel campaign
+ */
+export const CancelCampaignParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const CancelCampaignResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  template: zod.string(),
+  status: zod.string(),
+  delaySeconds: zod.number(),
+  provider: zod.string(),
+  listId: zod.number().nullish(),
+  totalContacts: zod.number(),
+  queuedCount: zod.number(),
+  sentCount: zod.number(),
+  deliveredCount: zod.number(),
+  readCount: zod.number(),
+  failedCount: zod.number(),
+  noAccountCount: zod.number(),
+  dryRun: zod.string(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+  startedAt: zod.string().nullish(),
+  finishedAt: zod.string().nullish(),
+});
+
+/**
+ * @summary Get campaign detailed report
+ */
+export const GetCampaignReportParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const getCampaignReportQueryPageDefault = 1;
+export const getCampaignReportQueryLimitDefault = 50;
+
+export const GetCampaignReportQueryParams = zod.object({
+  status: zod.coerce.string().nullish(),
+  page: zod.coerce.number().default(getCampaignReportQueryPageDefault),
+  limit: zod.coerce.number().default(getCampaignReportQueryLimitDefault),
+});
+
+export const GetCampaignReportResponse = zod.object({
+  campaign: zod
+    .object({
+      id: zod.number(),
+      name: zod.string(),
+      template: zod.string(),
+      status: zod.string(),
+      delaySeconds: zod.number(),
+      provider: zod.string(),
+      listId: zod.number().nullish(),
+      totalContacts: zod.number(),
+      queuedCount: zod.number(),
+      sentCount: zod.number(),
+      deliveredCount: zod.number(),
+      readCount: zod.number(),
+      failedCount: zod.number(),
+      noAccountCount: zod.number(),
+      dryRun: zod.string(),
+      createdAt: zod.string(),
+      updatedAt: zod.string(),
+      startedAt: zod.string().nullish(),
+      finishedAt: zod.string().nullish(),
+    })
+    .and(
+      zod.object({
+        listName: zod.string().nullish(),
+      }),
+    ),
+  contacts: zod.array(
+    zod.object({
+      id: zod.number(),
+      contactId: zod.number(),
+      contactName: zod.string(),
+      contactPhone: zod.string(),
+      renderedMessage: zod.string(),
+      status: zod.string(),
+      validationError: zod.string().nullish(),
+      queuedAt: zod.string().nullish(),
+      sentAt: zod.string().nullish(),
+      deliveredAt: zod.string().nullish(),
+      readAt: zod.string().nullish(),
+      failedAt: zod.string().nullish(),
+    }),
+  ),
+  total: zod.number(),
+  page: zod.number(),
+  limit: zod.number(),
+});
+
+/**
+ * @summary Get tracking overview stats
+ */
+export const GetTrackingOverviewResponse = zod.object({
+  totalMessages: zod.number(),
+  queued: zod.number(),
+  sent: zod.number(),
+  delivered: zod.number(),
+  read: zod.number(),
+  failed: zod.number(),
+  noAccount: zod.number(),
+  deliveryRate: zod.number(),
+  readRate: zod.number(),
+  failureRate: zod.number(),
+});
+
+/**
+ * @summary List messages
+ */
+export const getMessagesQueryPageDefault = 1;
+export const getMessagesQueryLimitDefault = 50;
+
+export const GetMessagesQueryParams = zod.object({
+  status: zod.coerce.string().nullish(),
+  campaignId: zod.coerce.number().nullish(),
+  search: zod.coerce.string().nullish(),
+  page: zod.coerce.number().default(getMessagesQueryPageDefault),
+  limit: zod.coerce.number().default(getMessagesQueryLimitDefault),
+});
+
+export const GetMessagesResponse = zod.object({
+  messages: zod.array(
+    zod.object({
+      id: zod.number(),
+      campaignId: zod.number(),
+      campaignName: zod.string(),
+      contactId: zod.number(),
+      contactName: zod.string(),
+      contactPhone: zod.string(),
+      externalMessageId: zod.string().nullish(),
+      provider: zod.string(),
+      lastStatus: zod.string(),
+      errorMessage: zod.string().nullish(),
+      retryCount: zod.number(),
+      createdAt: zod.string(),
+      updatedAt: zod.string(),
+    }),
+  ),
+  total: zod.number(),
+  page: zod.number(),
+  limit: zod.number(),
+});
+
+/**
+ * @summary Get message by ID with event timeline
+ */
+export const GetMessageParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const GetMessageResponse = zod
+  .object({
+    id: zod.number(),
+    campaignId: zod.number(),
+    campaignName: zod.string(),
+    contactId: zod.number(),
+    contactName: zod.string(),
+    contactPhone: zod.string(),
+    externalMessageId: zod.string().nullish(),
+    provider: zod.string(),
+    lastStatus: zod.string(),
+    errorMessage: zod.string().nullish(),
+    retryCount: zod.number(),
+    createdAt: zod.string(),
+    updatedAt: zod.string(),
+  })
+  .and(
+    zod.object({
+      events: zod.array(
+        zod.object({
+          id: zod.number(),
+          messageId: zod.number(),
+          status: zod.string(),
+          description: zod.string().nullish(),
+          createdAt: zod.string(),
+        }),
+      ),
+      requestPayload: zod.record(zod.string(), zod.unknown()).optional(),
+      responsePayload: zod.record(zod.string(), zod.unknown()).optional(),
+    }),
+  );
+
+/**
+ * @summary Retry failed message
+ */
+export const RetryMessageParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const RetryMessageResponse = zod
+  .object({
+    id: zod.number(),
+    campaignId: zod.number(),
+    campaignName: zod.string(),
+    contactId: zod.number(),
+    contactName: zod.string(),
+    contactPhone: zod.string(),
+    externalMessageId: zod.string().nullish(),
+    provider: zod.string(),
+    lastStatus: zod.string(),
+    errorMessage: zod.string().nullish(),
+    retryCount: zod.number(),
+    createdAt: zod.string(),
+    updatedAt: zod.string(),
+  })
+  .and(
+    zod.object({
+      events: zod.array(
+        zod.object({
+          id: zod.number(),
+          messageId: zod.number(),
+          status: zod.string(),
+          description: zod.string().nullish(),
+          createdAt: zod.string(),
+        }),
+      ),
+      requestPayload: zod.record(zod.string(), zod.unknown()).optional(),
+      responsePayload: zod.record(zod.string(), zod.unknown()).optional(),
+    }),
+  );
+
+/**
+ * @summary Export messages as CSV
+ */
+export const ExportMessagesQueryParams = zod.object({
+  status: zod.coerce.string().nullish(),
+  campaignId: zod.coerce.number().nullish(),
+});
+
+/**
+ * @summary Get dashboard overview
+ */
+export const GetDashboardResponse = zod.object({
+  totalCampaigns: zod.number(),
+  activeCampaigns: zod.number(),
+  totalContacts: zod.number(),
+  totalMessages: zod.number(),
+  messageSummary: zod.object({
+    totalMessages: zod.number(),
+    queued: zod.number(),
+    sent: zod.number(),
+    delivered: zod.number(),
+    read: zod.number(),
+    failed: zod.number(),
+    noAccount: zod.number(),
+    deliveryRate: zod.number(),
+    readRate: zod.number(),
+    failureRate: zod.number(),
+  }),
+  recentCampaigns: zod.array(
+    zod.object({
+      id: zod.number(),
+      name: zod.string(),
+      template: zod.string(),
+      status: zod.string(),
+      delaySeconds: zod.number(),
+      provider: zod.string(),
+      listId: zod.number().nullish(),
+      totalContacts: zod.number(),
+      queuedCount: zod.number(),
+      sentCount: zod.number(),
+      deliveredCount: zod.number(),
+      readCount: zod.number(),
+      failedCount: zod.number(),
+      noAccountCount: zod.number(),
+      dryRun: zod.string(),
+      createdAt: zod.string(),
+      updatedAt: zod.string(),
+      startedAt: zod.string().nullish(),
+      finishedAt: zod.string().nullish(),
+    }),
+  ),
+  recentFailures: zod.array(
+    zod.object({
+      id: zod.number(),
+      campaignId: zod.number(),
+      campaignName: zod.string(),
+      contactId: zod.number(),
+      contactName: zod.string(),
+      contactPhone: zod.string(),
+      externalMessageId: zod.string().nullish(),
+      provider: zod.string(),
+      lastStatus: zod.string(),
+      errorMessage: zod.string().nullish(),
+      retryCount: zod.number(),
+      createdAt: zod.string(),
+      updatedAt: zod.string(),
+    }),
+  ),
+});
+
+/**
+ * @summary List provider configurations
+ */
+export const GetProvidersResponseItem = zod.object({
+  id: zod.number(),
+  providerName: zod.string(),
+  baseUrl: zod.string().nullish(),
+  instanceId: zod.string().nullish(),
+  isActive: zod.string(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+export const GetProvidersResponse = zod.array(GetProvidersResponseItem);
+
+/**
+ * @summary Save provider configuration
+ */
+export const SaveProviderConfigBody = zod.object({
+  providerName: zod.string(),
+  baseUrl: zod.string().nullish(),
+  instanceId: zod.string().nullish(),
+  apiToken: zod.string().nullish(),
+  webhookSecret: zod.string().nullish(),
+  isActive: zod.string().optional(),
+});
+
+export const SaveProviderConfigResponse = zod.object({
+  id: zod.number(),
+  providerName: zod.string(),
+  baseUrl: zod.string().nullish(),
+  instanceId: zod.string().nullish(),
+  isActive: zod.string(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+
+/**
+ * @summary Test provider connection
+ */
+export const TestProviderBody = zod.object({
+  providerName: zod.string(),
+  baseUrl: zod.string().nullish(),
+  instanceId: zod.string().nullish(),
+  apiToken: zod.string().nullish(),
+});
+
+export const TestProviderResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string(),
+  latencyMs: zod.number().nullish(),
+});
+
+/**
+ * @summary Handle provider webhook
+ */
+export const HandleWebhookParams = zod.object({
+  provider: zod.coerce.string(),
+});
+
+export const HandleWebhookBody = zod.record(zod.string(), zod.unknown());
+
+export const HandleWebhookResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string().optional(),
+});
