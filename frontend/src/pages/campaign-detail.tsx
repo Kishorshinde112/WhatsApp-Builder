@@ -11,7 +11,7 @@ import {
   useCancelCampaign,
   useValidateCampaign,
   useCreateCampaign,
-} from "@workspace/api-client-react";
+} from "@/lib/api-client";
 import { useQueryClient } from "@tanstack/react-query";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
