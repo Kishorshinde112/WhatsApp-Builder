@@ -7,7 +7,7 @@ import {
   contactsTable,
   campaignContactsTable,
 } from "@workspace/db";
-import { eq, and, ilike, or, sql, desc } from "drizzle-orm";
+import { eq, and, ilike, or, sql, desc, inArray } from "drizzle-orm";
 import { getProvider } from "../services/provider/index.js";
 
 const router = Router();
@@ -286,6 +286,7 @@ router.get("/tracking/export", async (req, res) => {
       lastStatus: messagesTable.lastStatus,
       errorMessage: messagesTable.errorMessage,
       retryCount: messagesTable.retryCount,
+      externalMessageId: messagesTable.externalMessageId,
       createdAt: messagesTable.createdAt,
       updatedAt: messagesTable.updatedAt,
     })
@@ -296,7 +297,7 @@ router.get("/tracking/export", async (req, res) => {
     .orderBy(messagesTable.createdAt);
 
   const csvRows = [
-    ["ID", "Campaign", "Contact", "Phone", "Provider", "Status", "Error", "Retries", "Created", "Updated"],
+    ["ID", "Campaign", "Contact", "Phone", "Provider", "Status", "Error", "Retries", "External ID", "Created", "Updated"],
     ...messages.map((m) => [
       m.id,
       m.campaignName ?? "",
@@ -306,8 +307,9 @@ router.get("/tracking/export", async (req, res) => {
       m.lastStatus,
       m.errorMessage ?? "",
       m.retryCount,
-      m.createdAt,
-      m.updatedAt,
+      m.externalMessageId ?? "",
+      m.createdAt ? new Date(m.createdAt).toISOString() : "",
+      m.updatedAt ? new Date(m.updatedAt).toISOString() : "",
     ]),
   ];
 
@@ -316,6 +318,123 @@ router.get("/tracking/export", async (req, res) => {
   res.setHeader("Content-Type", "text/csv");
   res.setHeader("Content-Disposition", `attachment; filename="messages-export-${Date.now()}.csv"`);
   return res.send(csv);
+});
+
+// Bulk retry failed messages
+router.post("/tracking/messages/bulk-retry", async (req, res) => {
+  const { messageIds, campaignId, status } = req.body as { 
+    messageIds?: number[]; 
+    campaignId?: number; 
+    status?: string;
+  };
+
+  // Build conditions for which messages to retry
+  const conditions = [
+    or(eq(messagesTable.lastStatus, "failed"), eq(messagesTable.lastStatus, "noAccount"))!
+  ];
+  
+  if (messageIds && messageIds.length > 0) {
+    conditions.push(inArray(messagesTable.id, messageIds));
+  }
+  if (campaignId) {
+    conditions.push(eq(messagesTable.campaignId, campaignId));
+  }
+  if (status) {
+    conditions.push(eq(messagesTable.lastStatus, status));
+  }
+
+  // Get all eligible messages
+  const messages = await db
+    .select({
+      id: messagesTable.id,
+      campaignId: messagesTable.campaignId,
+      contactId: messagesTable.contactId,
+      provider: messagesTable.provider,
+      retryCount: messagesTable.retryCount,
+    })
+    .from(messagesTable)
+    .where(and(...conditions))
+    .limit(100); // Cap at 100 to prevent overload
+
+  if (messages.length === 0) {
+    return res.json({ success: true, retriedCount: 0, message: "No failed messages found matching criteria" });
+  }
+
+  let retriedCount = 0;
+  const errors: { messageId: number; error: string }[] = [];
+
+  for (const msg of messages) {
+    try {
+      const [contact] = await db
+        .select({ phone: contactsTable.phone })
+        .from(contactsTable)
+        .where(eq(contactsTable.id, msg.contactId));
+
+      if (!contact) {
+        errors.push({ messageId: msg.id, error: "Contact not found" });
+        continue;
+      }
+
+      const cc = await db
+        .select({ renderedMessage: campaignContactsTable.renderedMessage })
+        .from(campaignContactsTable)
+        .where(
+          and(
+            eq(campaignContactsTable.campaignId, msg.campaignId),
+            eq(campaignContactsTable.contactId, msg.contactId)
+          )
+        );
+
+      const message = cc[0]?.renderedMessage ?? "Retried message";
+      const provider = getProvider(msg.provider ?? "mock");
+
+      const result = await provider.sendMessage({
+        contactId: msg.contactId,
+        phone: contact.phone,
+        message,
+        campaignId: msg.campaignId,
+      });
+
+      await db
+        .update(messagesTable)
+        .set({
+          externalMessageId: result.externalMessageId,
+          lastStatus: "sent",
+          errorMessage: null,
+          retryCount: msg.retryCount + 1,
+          responsePayload: result.responsePayload as Record<string, unknown>,
+          updatedAt: new Date(),
+        })
+        .where(eq(messagesTable.id, msg.id));
+
+      await db.insert(messageEventsTable).values({
+        messageId: msg.id,
+        status: "sent",
+        description: `Bulk retry (attempt ${msg.retryCount + 1})`,
+      });
+
+      await db
+        .update(campaignContactsTable)
+        .set({ status: "sent", sentAt: new Date(), updatedAt: new Date() })
+        .where(
+          and(
+            eq(campaignContactsTable.campaignId, msg.campaignId),
+            eq(campaignContactsTable.contactId, msg.contactId)
+          )
+        );
+
+      retriedCount++;
+    } catch (err) {
+      errors.push({ messageId: msg.id, error: String(err) });
+    }
+  }
+
+  return res.json({
+    success: true,
+    retriedCount,
+    totalEligible: messages.length,
+    errors: errors.slice(0, 10),
+  });
 });
 
 router.get("/dashboard", async (_req, res) => {

@@ -4,6 +4,7 @@ import {
   useGetMessages,
   getGetMessagesQueryKey,
 } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,16 +24,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
-import { Search, Download } from "lucide-react";
+import { Search, Download, RotateCcw } from "lucide-react";
 
 export default function Tracking() {
   const [status, setStatus] = useState("all");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [isRetrying, setIsRetrying] = useState(false);
   const limit = 25;
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
-  const { data: overview } = useGetTrackingOverview();
+  const { data: overview, refetch: refetchOverview } = useGetTrackingOverview();
 
   const params = {
     page,
@@ -52,6 +57,46 @@ export default function Tracking() {
     window.location.href = `${base}/api/tracking/export${qs}`;
   };
 
+  const handleBulkRetry = async () => {
+    const failedCount = (overview?.failed ?? 0) + (overview?.noAccount ?? 0);
+    if (failedCount === 0) {
+      toast({ title: "No failed messages to retry" });
+      return;
+    }
+
+    setIsRetrying(true);
+    try {
+      const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+      const body: Record<string, unknown> = {};
+      if (status === "failed" || status === "noAccount") {
+        body.status = status;
+      }
+      
+      const response = await fetch(`${base}/api/tracking/messages/bulk-retry`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        toast({ 
+          title: `Retried ${result.retriedCount} messages`,
+          description: result.errors?.length ? `${result.errors.length} errors occurred` : undefined
+        });
+        queryClient.invalidateQueries({ queryKey: getGetMessagesQueryKey(params) });
+        refetchOverview();
+      } else {
+        toast({ title: "Bulk retry failed", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Bulk retry failed", variant: "destructive" });
+    } finally {
+      setIsRetrying(false);
+    }
+  };
+
   const stats = overview ? [
     { label: "Queued", value: overview.queued ?? 0, cls: "text-muted-foreground" },
     { label: "Sent", value: overview.sent ?? 0, cls: "text-blue-600 dark:text-blue-400" },
@@ -65,10 +110,24 @@ export default function Tracking() {
     <div className="space-y-6" data-testid="tracking-page">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold tracking-tight">Message Tracking</h1>
-        <Button variant="outline" size="sm" onClick={handleExport} data-testid="export-btn">
-          <Download className="h-4 w-4 mr-2" />
-          Export CSV
-        </Button>
+        <div className="flex items-center gap-2">
+          {((overview?.failed ?? 0) + (overview?.noAccount ?? 0)) > 0 && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleBulkRetry} 
+              disabled={isRetrying}
+              data-testid="bulk-retry-btn"
+            >
+              <RotateCcw className={`h-4 w-4 mr-2 ${isRetrying ? "animate-spin" : ""}`} />
+              {isRetrying ? "Retrying..." : `Retry Failed (${(overview?.failed ?? 0) + (overview?.noAccount ?? 0)})`}
+            </Button>
+          )}
+          <Button variant="outline" size="sm" onClick={handleExport} data-testid="export-btn">
+            <Download className="h-4 w-4 mr-2" />
+            Export CSV
+          </Button>
+        </div>
       </div>
 
       {/* Status bar */}

@@ -1,0 +1,80 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: whatsapp-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-whatsapp}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-whatsapp_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-whatsapp_campaigns}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-whatsapp}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: api
+    container_name: whatsapp-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 8080
+      DATABASE_URL: postgresql://${POSTGRES_USER:-whatsapp}:${POSTGRES_PASSWORD:-whatsapp_secret}@postgres:5432/${POSTGRES_DB:-whatsapp_campaigns}
+      MOCK_PROVIDER_DELAY_MS: ${MOCK_PROVIDER_DELAY_MS:-500}
+      MOCK_PROVIDER_FAIL_RATE: ${MOCK_PROVIDER_FAIL_RATE:-0.05}
+      GREEN_API_INSTANCE_ID: ${GREEN_API_INSTANCE_ID:-}
+      GREEN_API_TOKEN: ${GREEN_API_TOKEN:-}
+      EVOLUTION_API_URL: ${EVOLUTION_API_URL:-}
+      EVOLUTION_API_KEY: ${EVOLUTION_API_KEY:-}
+      EVOLUTION_API_INSTANCE: ${EVOLUTION_API_INSTANCE:-}
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: dashboard
+    container_name: whatsapp-dashboard
+    restart: unless-stopped
+    depends_on:
+      - api
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      BASE_PATH: /
+    ports:
+      - "3000:3000"
+
+  nginx:
+    image: nginx:alpine
+    container_name: whatsapp-nginx
+    restart: unless-stopped
+    depends_on:
+      - api
+      - dashboard
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+
+volumes:
+  postgres_data:

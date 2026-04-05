@@ -14,6 +14,7 @@ import {
   resumeRunner,
   cancelRunner,
 } from "../services/campaign-runner.js";
+import { isProviderConfigured } from "../services/provider/index.js";
 import { logger } from "../lib/logger.js";
 import { CreateCampaignBody, UpdateCampaignBody } from "@workspace/api-zod";
 
@@ -266,6 +267,15 @@ router.post("/campaigns/:id/launch", async (req, res) => {
 
   if (!["draft", "ready"].includes(campaign.status)) {
     return res.status(400).json({ error: `Cannot launch campaign in ${campaign.status} status` });
+  }
+
+  // Validate provider is configured
+  const providerCheck = isProviderConfigured(campaign.provider);
+  if (!providerCheck.configured) {
+    return res.status(400).json({ 
+      error: `Provider "${campaign.provider}" is not configured`,
+      details: providerCheck.error 
+    });
   }
 
   if (!campaign.listId) {

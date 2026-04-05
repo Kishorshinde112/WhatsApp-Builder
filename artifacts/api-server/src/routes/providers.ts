@@ -9,7 +9,7 @@ import {
 } from "@workspace/db";
 import { eq, and, sql } from "drizzle-orm";
 import { logger } from "../lib/logger.js";
-import { getProvider } from "../services/provider/index.js";
+import { getProvider, isProviderConfigured } from "../services/provider/index.js";
 
 const router = Router();
 
@@ -127,10 +127,21 @@ router.post("/providers/test", async (req, res) => {
     });
   }
 
+  // Check if provider is configured
+  const configCheck = isProviderConfigured(providerName);
+  if (!configCheck.configured) {
+    return res.json({
+      success: false,
+      message: configCheck.error || `Provider "${providerName}" is not configured.`,
+      latencyMs: null,
+    });
+  }
+
+  // Provider is configured but not fully implemented yet
   return res.json({
-    success: false,
-    message: `Provider "${providerName}" is not configured. Only the mock provider is available in this environment.`,
-    latencyMs: null,
+    success: true,
+    message: `Provider "${providerName}" is configured. Note: Full integration pending - currently using stub implementation.`,
+    latencyMs: Date.now() - start,
   });
 });
 

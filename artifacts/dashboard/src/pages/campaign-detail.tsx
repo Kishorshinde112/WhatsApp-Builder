@@ -10,6 +10,7 @@ import {
   useResumeCampaign,
   useCancelCampaign,
   useValidateCampaign,
+  useCreateCampaign,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { StatusBadge } from "@/components/status-badge";
@@ -43,8 +44,19 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Play, Pause, RotateCcw, XCircle, CheckCircle, Search } from "lucide-react";
+import { ArrowLeft, Play, Pause, RotateCcw, XCircle, CheckCircle, Search, Copy } from "lucide-react";
 import { Link } from "wouter";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  Cell,
+  PieChart,
+  Pie,
+} from "recharts";
 
 export default function CampaignDetail() {
   const [, params] = useRoute("/campaigns/:id");
@@ -72,10 +84,30 @@ export default function CampaignDetail() {
   const pause = usePauseCampaign();
   const resume = useResumeCampaign();
   const cancel = useCancelCampaign();
+  const duplicate = useCreateCampaign();
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: getGetCampaignQueryKey(id) });
     queryClient.invalidateQueries({ queryKey: getGetCampaignReportQueryKey(id, reportParams) });
+  };
+
+  const handleDuplicate = async () => {
+    try {
+      const newCampaign = await duplicate.mutateAsync({
+        data: {
+          name: `${campaign.name} (Copy)`,
+          template: campaign.template,
+          delaySeconds: campaign.delaySeconds,
+          provider: campaign.provider,
+          listId: campaign.listId ?? undefined,
+          dryRun: campaign.dryRun,
+        },
+      });
+      toast({ title: "Campaign duplicated successfully" });
+      navigate(`/campaigns/${newCampaign.id}`);
+    } catch {
+      toast({ title: "Failed to duplicate campaign", variant: "destructive" });
+    }
   };
 
   const handleAction = async (action: string) => {
@@ -122,6 +154,35 @@ export default function CampaignDetail() {
     { label: "Failed", value: campaign.failedCount ?? 0, cls: "text-red-500" },
     { label: "No Account", value: campaign.noAccountCount ?? 0, cls: "text-orange-500" },
   ];
+
+  // Funnel chart data
+  const funnelData = [
+    { name: "Sent", value: (campaign.sentCount ?? 0) + (campaign.deliveredCount ?? 0) + (campaign.readCount ?? 0), fill: "#3b82f6" },
+    { name: "Delivered", value: (campaign.deliveredCount ?? 0) + (campaign.readCount ?? 0), fill: "#14b8a6" },
+    { name: "Read", value: campaign.readCount ?? 0, fill: "#22c55e" },
+  ];
+
+  // Pie chart data for outcome breakdown
+  const outcomeData = [
+    { name: "Read", value: campaign.readCount ?? 0, fill: "#22c55e" },
+    { name: "Delivered", value: campaign.deliveredCount ?? 0, fill: "#14b8a6" },
+    { name: "Sent", value: campaign.sentCount ?? 0, fill: "#3b82f6" },
+    { name: "Queued", value: campaign.queuedCount ?? 0, fill: "#6b7280" },
+    { name: "Failed", value: campaign.failedCount ?? 0, fill: "#ef4444" },
+    { name: "No Account", value: campaign.noAccountCount ?? 0, fill: "#f97316" },
+  ].filter(d => d.value > 0);
+
+  // Calculate rates
+  const totalProcessed = (campaign.totalContacts ?? 0) - (campaign.queuedCount ?? 0);
+  const deliveryRate = totalProcessed > 0 
+    ? (((campaign.deliveredCount ?? 0) + (campaign.readCount ?? 0)) / totalProcessed * 100).toFixed(1)
+    : "0.0";
+  const readRate = totalProcessed > 0 
+    ? ((campaign.readCount ?? 0) / totalProcessed * 100).toFixed(1)
+    : "0.0";
+  const failureRate = totalProcessed > 0 
+    ? (((campaign.failedCount ?? 0) + (campaign.noAccountCount ?? 0)) / totalProcessed * 100).toFixed(1)
+    : "0.0";
 
   return (
     <div className="space-y-6" data-testid="campaign-detail-page">
@@ -176,6 +237,10 @@ export default function CampaignDetail() {
               Cancel
             </Button>
           )}
+          <Button size="sm" variant="outline" onClick={handleDuplicate} data-testid="duplicate-btn">
+            <Copy className="h-3.5 w-3.5 mr-2" />
+            Duplicate
+          </Button>
         </div>
       </div>
 
@@ -183,6 +248,75 @@ export default function CampaignDetail() {
         <p className="text-xs text-muted-foreground mb-2 font-medium uppercase tracking-wider">Template</p>
         <p className="text-sm whitespace-pre-wrap font-mono leading-relaxed">{campaign.template}</p>
       </div>
+
+      {/* Analytics Charts */}
+      {campaign.status !== "draft" && totalProcessed > 0 && (
+        <div className="grid gap-4 md:grid-cols-2">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Delivery Funnel</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={180}>
+                <BarChart data={funnelData} layout="vertical" margin={{ left: 0, right: 20 }}>
+                  <XAxis type="number" hide />
+                  <YAxis type="category" dataKey="name" width={70} tick={{ fontSize: 12 }} />
+                  <Tooltip 
+                    formatter={(value: number) => [value.toLocaleString(), "Messages"]}
+                    contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }}
+                  />
+                  <Bar dataKey="value" radius={[0, 4, 4, 0]}>
+                    {funnelData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.fill} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+              <div className="flex justify-center gap-6 mt-2 text-xs">
+                <span>Delivery: <strong className="text-teal-600">{deliveryRate}%</strong></span>
+                <span>Read: <strong className="text-green-600">{readRate}%</strong></span>
+                <span>Failed: <strong className="text-red-500">{failureRate}%</strong></span>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Outcome Breakdown</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={180}>
+                <PieChart>
+                  <Pie
+                    data={outcomeData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={40}
+                    outerRadius={70}
+                    paddingAngle={2}
+                    dataKey="value"
+                  >
+                    {outcomeData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.fill} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    formatter={(value: number, name: string) => [value.toLocaleString(), name]}
+                    contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="flex flex-wrap justify-center gap-3 mt-2">
+                {outcomeData.map((d) => (
+                  <span key={d.name} className="flex items-center gap-1 text-xs">
+                    <span className="w-2 h-2 rounded-full" style={{ background: d.fill }} />
+                    {d.name}: {d.value}
+                  </span>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       <div className="grid grid-cols-4 gap-3 sm:grid-cols-7">
         {stats.map((s) => (
