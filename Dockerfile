@@ -8,24 +8,26 @@ WORKDIR /app
 
 # Install dependencies
 FROM base AS deps
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY lib/db/package.json ./lib/db/
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json tsconfig.json ./
+COPY lib/db/package.json lib/db/tsconfig.json ./lib/db/
 COPY lib/api-spec/package.json ./lib/api-spec/
-COPY lib/api-client-react/package.json ./lib/api-client-react/
-COPY lib/api-zod/package.json ./lib/api-zod/
-COPY artifacts/api-server/package.json ./artifacts/api-server/
-COPY artifacts/dashboard/package.json ./artifacts/dashboard/
-COPY scripts/package.json ./scripts/
+COPY lib/api-client-react/package.json lib/api-client-react/tsconfig.json ./lib/api-client-react/
+COPY lib/api-zod/package.json lib/api-zod/tsconfig.json ./lib/api-zod/
+COPY artifacts/api-server/package.json artifacts/api-server/tsconfig.json ./artifacts/api-server/
+COPY artifacts/dashboard/package.json artifacts/dashboard/tsconfig.json ./artifacts/dashboard/
+COPY scripts/package.json scripts/tsconfig.json ./scripts/
 RUN pnpm install --frozen-lockfile
 
-# Build shared libraries
+# Build all packages
 FROM deps AS builder
 COPY . .
 RUN pnpm run build
 
 # API Server production image
-FROM base AS api
+FROM node:24-alpine AS api
+RUN corepack enable && corepack prepare pnpm@latest --activate
 WORKDIR /app
+RUN apk add --no-cache curl
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/lib ./lib
 COPY --from=builder /app/artifacts/api-server ./artifacts/api-server
@@ -34,8 +36,9 @@ ENV NODE_ENV=production
 EXPOSE 8080
 CMD ["node", "--enable-source-maps", "artifacts/api-server/dist/index.mjs"]
 
-# Dashboard production image
-FROM base AS dashboard
+# Dashboard production image  
+FROM node:24-alpine AS dashboard
+RUN corepack enable && corepack prepare pnpm@latest --activate
 WORKDIR /app
 RUN apk add --no-cache curl
 COPY --from=builder /app/node_modules ./node_modules

@@ -21,8 +21,8 @@ module.exports = {
     {
       name: "whatsapp-dashboard",
       cwd: "./artifacts/dashboard",
-      script: "node_modules/.bin/vite",
-      args: "preview --host 0.0.0.0",
+      script: "../../node_modules/.bin/vite",
+      args: "preview --port 3000 --host 0.0.0.0",
       instances: 1,
       autorestart: true,
       watch: false,
